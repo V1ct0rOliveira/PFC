@@ -1,57 +1,88 @@
-# Sistema de Estoque com 2FA
+# Sistema Web de Gerenciamento de Estoque
 
-Sistema Django com autenticação em dois fatores via Twilio.
+Sistema desenvolvido por **Victor Oliveira** e **Vinicius Nascimento**, com orientação de **Fabiano Bezerra**, como parte do bacharelado em Engenharia de Software na **Universidade de Mogi das Cruzes**.
 
-## Configuração
+## 🚀 Instalação e Configuração
 
-1. **Instalar dependências:**
+### 1. Criar ambiente virtual
+```bash
+python -m venv venv
+```
+
+### 2. Ativar ambiente virtual
+```bash
+# Windows
+venv\Scripts\activate
+
+# Linux/Mac
+source venv/bin/activate
+```
+
+### 3. Instalar dependências
 ```bash
 pip install -r requirements.txt
 ```
 
-2. **Configurar banco de dados:**
+### 4. Criar arquivo .env
+Crie um arquivo `.env` na raiz do projeto com:
 ```bash
-python setup_db.py
+# Configurações Twilio (para 2FA)
+TWILIO_ACCOUNT_SID=seu_account_sid
+TWILIO_AUTH_TOKEN=seu_auth_token
+TWILIO_VERIFY_SID=seu_verify_sid
+
+# Configurações do Supabase
+DB_NAME=nome_do_database
+DB_USER=nome_do_user
+DB_PASSWORD=sua_senha
+DB_HOST=host_do_banco
+DB_PORT=porta_do_banco
 ```
 
-3. **Criar superusuário:**
+### 5. Configurar banco de dados
 ```bash
+python manage.py makemigrations
+python manage.py migrate
 python manage.py createsuperuser
 ```
 
-4. **Executar servidor:**
+### 6. Executar o sistema
 ```bash
+# Comando único que inicia tudo
 python manage.py runserver
 ```
 
-## Funcionalidades
+**Acesse:**
+- Interface Web: http://localhost:5000
+- Admin Django: http://localhost:8000/admin
 
-- ✅ Cadastro de usuários
-- ✅ Login com autenticação 2FA via SMS
-- ✅ Dashboard protegido
-- ✅ Modelo de usuário customizado
-- ✅ Interface responsiva com Bootstrap
+## 📊 Funcionalidades
 
-## Configuração Twilio
+### Níveis de Acesso
+- **Usuário Comum**: Visualizar estoque e solicitar retiradas
+- **Administrador**: Controle total do estoque e produtos
+- **Superadministrador**: Todas as permissões + logs e gestão de usuários
 
-As credenciais do Twilio já estão configuradas no arquivo `.env`:
-- Account SID
-- Auth Token  
-- Verify Service SID
+### Recursos Principais
+- ✅ Gestão completa de produtos
+- ✅ Movimentações (entradas, saídas, ajustes)
+- ✅ Dashboard com estatísticas em tempo real
+- ✅ Autenticação 2FA via SMS (Twilio)
+- ✅ Notificações de estoque baixo
+- ✅ Relatórios em PDF, Excel e Word
+- ✅ Interface responsiva com Bootstrap 5
+- ✅ Logs de atividades detalhados
 
-## Fluxo de Autenticação
+## 🔧 Tecnologias
 
-1. Usuário faz cadastro
-2. Usuário faz login (username/password)
-3. Sistema solicita verificação 2FA
-4. Código SMS é enviado via Twilio
-5. Usuário insere código e acessa dashboard
+- **Backend**: Django 4.2 + Django REST Framework
+- **Frontend**: Flask + Jinja2 + Bootstrap 5
+- **Banco**: SQLite (desenvolvimento) / PostgreSQL (produção)
+- **Autenticação**: JWT + Twilio 2FA
+- **Relatórios**: python-docx, openpyxl, reportlab
 
-## URLs Disponíveis
+## 📝 URLs Disponíveis
 
-- `/` - Página inicial
-- `/cadastro/` - Cadastro de usuário
-- `/login/` - Login
-- `/verify-2fa/` - Verificação 2FA
-- `/dashboard/` - Dashboard (protegido)
-- `/logout/` - Logout
+- **Interface Web**: http://localhost:5000
+- **API REST**: http://localhost:8000/api
+- **Admin Django**: http://localhost:8000/admin
