@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro - Sistema de Estoque{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Criar Conta</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nome" class="form-label">Nome</label>
+                            <input type="text" class="form-control" id="nome" name="nome" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="sobrenome" class="form-label">Sobrenome</label>
+                            <input type="text" class="form-control" id="sobrenome" name="sobrenome" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Usuário</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="telefone" class="form-label">Telefone (com código do país)</label>
+                        <input type="tel" class="form-control" id="telefone" name="telefone" placeholder="+5511999999999" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
+                </form>
+                <div class="text-center mt-3">
+                    <p>Já tem uma conta? <a href="{% url 'login' %}">Faça login</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

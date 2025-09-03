@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Stock Flow{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Bem-vindo, {{ user.nome }}!</h2>
+        <p class="text-muted">Nível de acesso: {{ user.nivel_acesso|title }}</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Estoque</h5>
+                <p class="card-text">Visualizar e gerenciar produtos</p>
+                <a href="#" class="btn btn-primary">Acessar</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Relatórios</h5>
+                <p class="card-text">Gerar relatórios do sistema</p>
+                <a href="#" class="btn btn-primary">Acessar</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Configurações</h5>
+                <p class="card-text">Configurar conta e sistema</p>
+                <a href="#" class="btn btn-primary">Acessar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
