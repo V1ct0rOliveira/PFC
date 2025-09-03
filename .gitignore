@@ -1,0 +1,32 @@
+# Configurações
+.env
+
+#Ambiente virtual
+venv/
+env/
+.venv/
+.env/
+
+# Arquivos compilados
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+*.whl
+*.log
+*.sqlite3
+*.db
+*.bak
+*.swp
+*.swo
+*.tmp
+*.DS_Store
+*.idea/
+.vscode/
+*.pytest_cache/
+.coverage
+htmlcov/
+.tox/
