@@ -103,10 +103,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Twilio Settings
-TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID')
-TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN')
-TWILIO_VERIFY_SERVICE_SID = config('TWILIO_VERIFY_SERVICE_SID')
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/

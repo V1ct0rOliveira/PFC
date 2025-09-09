@@ -26,11 +26,6 @@ pip install -r requirements.txt
 ### 4. Criar arquivo .env
 Crie um arquivo `.env` na raiz do projeto com:
 ```bash
-# Configurações Twilio (para 2FA)
-TWILIO_ACCOUNT_SID=seu_account_sid
-TWILIO_AUTH_TOKEN=seu_auth_token
-TWILIO_VERIFY_SID=seu_verify_sid
-
 # Configurações do Supabase
 DB_NAME=nome_do_database
 DB_USER=nome_do_user
@@ -39,21 +34,14 @@ DB_HOST=host_do_banco
 DB_PORT=porta_do_banco
 ```
 
-### 5. Configurar banco de dados
-```bash
-python manage.py makemigrations
-python manage.py migrate
-python manage.py createsuperuser
-```
-
-### 6. Executar o sistema
+### 5. Executar o sistema
 ```bash
 # Comando único que inicia tudo
 python manage.py runserver
 ```
 
 **Acesse:**
-- Interface Web: http://localhost:5000
+- Interface Web: http://localhost:8000
 - Admin Django: http://localhost:8000/admin
 
 ## 📊 Funcionalidades
@@ -64,25 +52,23 @@ python manage.py runserver
 - **Superadministrador**: Todas as permissões + logs e gestão de usuários
 
 ### Recursos Principais
-- ✅ Gestão completa de produtos
-- ✅ Movimentações (entradas, saídas, ajustes)
-- ✅ Dashboard com estatísticas em tempo real
-- ✅ Autenticação 2FA via SMS (Twilio)
-- ✅ Notificações de estoque baixo
-- ✅ Relatórios em PDF, Excel e Word
-- ✅ Interface responsiva com Bootstrap 5
-- ✅ Logs de atividades detalhados
+- 🟡 Gestão completa de produtos
+- 🟡 Movimentações (entradas, saídas, ajustes)
+- 🟡 Dashboard com estatísticas em tempo real
+- 🟡 Notificações de estoque baixo
+- 🟡 Relatórios em PDF, Excel e Word
+- 🟡 Interface responsiva com Bootstrap 5
+- 🟡 Logs de atividades detalhados
 
 ## 🔧 Tecnologias
 
 - **Backend**: Django 4.2 + Django REST Framework
 - **Frontend**: Flask + Jinja2 + Bootstrap 5
 - **Banco**: SQLite (desenvolvimento) / PostgreSQL (produção)
-- **Autenticação**: JWT + Twilio 2FA
+- **Autenticação**: JWT
 - **Relatórios**: python-docx, openpyxl, reportlab
 
 ## 📝 URLs Disponíveis
 
-- **Interface Web**: http://localhost:5000
-- **API REST**: http://localhost:8000/api
+- **Interface Web**: http://localhost:8000
 - **Admin Django**: http://localhost:8000/admin
