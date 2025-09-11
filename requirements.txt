@@ -1,3 +1,4 @@
 Django
 python-decouple
 psycopg2-binary
+reportlab

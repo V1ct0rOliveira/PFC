@@ -104,3 +104,74 @@ def cadastro_produto(request):
     
     # Se não for POST, renderiza formulário de cadastro de produto
     return render(request, 'cadastro_produto.html')
+
+@login_required  # Protege a view, apenas usuários logados podem ver o estoque
+def estoque_geral(request):
+    """View para exibir o estoque geral de produtos"""
+    # Recupera todos os produtos do banco de dados
+    produtos = Product.objects.all()
+
+    # Renderiza template com os produtos
+    return render(request, 'estoque_geral.html', {'produtos': produtos})
+
+@login_required
+def gerar_relatorio_pdf(request):
+    """View para gerar relatório PDF do estoque"""
+    from django.http import HttpResponse
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+    from reportlab.lib.styles import getSampleStyleSheet
+    from datetime import datetime
+    
+    # Busca todos os produtos
+    produtos = Product.objects.all().order_by('nome')
+    
+    # Cria resposta HTTP para PDF
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="relatorio_estoque_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
+    
+    # Cria documento PDF
+    doc = SimpleDocTemplate(response, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Título
+    title = Paragraph("Relatório de Estoque Geral", styles['Title'])
+    elements.append(title)
+    
+    # Data
+    date = Paragraph(f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal'])
+    elements.append(date)
+    elements.append(Paragraph("<br/>", styles['Normal']))
+    
+    # Dados da tabela
+    data = [['Código', 'Nome', 'Quantidade', 'Local']]
+    
+    for produto in produtos:
+        data.append([
+            produto.codigo,
+            produto.nome,
+            str(produto.quantidade),
+            produto.local,
+        ])
+    
+    # Cria tabela
+    table = Table(data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    elements.append(table)
+    
+    # Gera PDF
+    doc.build(elements)
+    return response
