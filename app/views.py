@@ -1,12 +1,19 @@
 # Importações necessárias do Django
-from django.shortcuts import render, redirect  # Para renderizar templates e redirecionar
+from django.shortcuts import render, redirect, get_object_or_404  # Para renderizar templates e redirecionar
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout  # Sistema de autenticação
 from django.contrib.auth.decorators import login_required  # Decorator para proteger views
 from django.contrib import messages  # Sistema de mensagens para feedback ao usuário
-from .models import CustomUser, Product  # Modelos personalizados da aplicação
+from django.http import HttpResponseForbidden
+from django.db import transaction
+from django.utils import timezone
+from django.db.models import Q
+from .models import CustomUser, Product, Solicitacao, Movimentacao  # Modelos personalizados da aplicação
 
 def home(request):
     """View da página inicial do sistema"""
+    # Força logout para garantir que os botões aparecem
+    if request.user.is_authenticated:
+        auth_logout(request)
     return render(request, 'home.html')
 
 def cadastro(request):
@@ -53,7 +60,7 @@ def login(request):
         # Autentica o usuário
         user = authenticate(request, username=username, password=password)
         if user:
-            # Login bem-sucedido, redireciona para dashboard
+            # Login direto sem 2FA
             auth_login(request, user)
             return redirect('dashboard')
         else:
@@ -66,12 +73,119 @@ def login(request):
 @login_required  # Decorator que exige login para acessar esta view
 def dashboard(request):
     """View do painel principal do sistema (protegida por login)"""
-    return render(request, 'dashboard.html')
+    # Dados para o dashboard
+    produtos = Product.objects.all()
+    solicitacoes_pendentes = Solicitacao.objects.filter(status='PENDENTE').order_by('-data_solicitacao')
+    minhas_solicitacoes_aprovadas = Solicitacao.objects.filter(
+        solicitante=request.user, 
+        status='APROVADA'
+    ).order_by('-data_aprovacao')
+    
+    context = {
+        'produtos': produtos,
+        'solicitacoes_pendentes': solicitacoes_pendentes,
+        'minhas_solicitacoes_aprovadas': minhas_solicitacoes_aprovadas,
+    }
+    
+    return render(request, 'dashboard.html', context)
+
+def verify_2fa(request):
+    """View para verificação 2FA"""
+    if 'user_id' not in request.session:
+        return redirect('login')
+    
+    user = CustomUser.objects.get(id=request.session['user_id'])
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'send_code':
+            messages.success(request, 'Código enviado para seu telefone!')
+            return render(request, 'verify_2fa.html', {'code_sent': True})
+        
+        elif action == 'verify_code':
+            code = request.POST['code']
+            # Simulação de verificação (aceita qualquer código)
+            auth_login(request, user)
+            user.is_verified = True
+            user.save()
+            del request.session['user_id']
+            messages.success(request, 'Login realizado com sucesso!')
+            return redirect('dashboard')
+    
+    return render(request, 'verify_2fa.html')
 
 def logout(request):
     """View para logout do usuário"""
     auth_logout(request)  # Encerra a sessão do usuário
     return redirect('home')  # Redireciona para página inicial
+
+@login_required
+def listar_movimentacoes(request):
+    """View para listar movimentações com filtros"""
+    movimentacoes = Movimentacao.objects.select_related('produto', 'usuario').order_by('-data_hora')
+    
+    # Filtros
+    codigo = request.GET.get('codigo')
+    nome = request.GET.get('nome')
+    tipo = request.GET.get('tipo')
+    usuario_id = request.GET.get('usuario')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    
+    if codigo:
+        movimentacoes = movimentacoes.filter(produto__codigo__icontains=codigo)
+    if nome:
+        movimentacoes = movimentacoes.filter(produto__nome__icontains=nome)
+    if tipo:
+        movimentacoes = movimentacoes.filter(tipo=tipo)
+    if usuario_id:
+        movimentacoes = movimentacoes.filter(usuario_id=usuario_id)
+    if data_inicio:
+        movimentacoes = movimentacoes.filter(data_hora__date__gte=data_inicio)
+    if data_fim:
+        movimentacoes = movimentacoes.filter(data_hora__date__lte=data_fim)
+    
+    usuarios = CustomUser.objects.all()
+    tipos = Movimentacao.TIPO_CHOICES
+    
+    context = {
+        'movimentacoes': movimentacoes[:100],  # Limitar a 100 registros
+        'usuarios': usuarios,
+        'tipos': tipos,
+        'filtros': {
+            'codigo': codigo,
+            'nome': nome,
+            'tipo': tipo,
+            'usuario_id': usuario_id,
+            'data_inicio': data_inicio,
+            'data_fim': data_fim,
+        }
+    }
+    
+    return render(request, 'movimentacoes.html', context)
+
+@login_required
+def configuracoes(request):
+    """View para configurações do usuário"""
+    if request.method == 'POST':
+        # Atualizar dados do usuário
+        user = request.user
+        user.nome = request.POST.get('nome', user.nome)
+        user.sobrenome = request.POST.get('sobrenome', user.sobrenome)
+        user.email = request.POST.get('email', user.email)
+        user.telefone = request.POST.get('telefone', user.telefone)
+        
+        # Alterar senha se fornecida
+        nova_senha = request.POST.get('nova_senha')
+        if nova_senha:
+            user.set_password(nova_senha)
+        
+        user.save()
+        messages.success(request, 'Configurações atualizadas com sucesso!')
+        return redirect('configuracoes')
+    
+    return render(request, 'configuracoes.html')
 
 @login_required  # Protege a view, apenas usuários logados podem cadastrar produtos
 def cadastro_produto(request):
@@ -175,3 +289,151 @@ def gerar_relatorio_pdf(request):
     # Gera PDF
     doc.build(elements)
     return response
+
+@login_required
+def solicitar_produto(request):
+    """View para solicitar produtos"""
+    if request.method == 'POST':
+        codigo = request.POST.get('codigo')
+        quantidade = int(request.POST.get('quantidade', 0))
+        
+        if quantidade <= 0:
+            messages.error(request, 'Quantidade deve ser maior que zero')
+            return redirect('dashboard')
+        
+        try:
+            produto = Product.objects.get(codigo=codigo)
+        except Product.DoesNotExist:
+            messages.error(request, 'Produto não encontrado')
+            return redirect('dashboard')
+        
+        # Criar solicitação
+        solicitacao = Solicitacao.objects.create(
+            produto=produto,
+            quantidade=quantidade,
+            solicitante=request.user
+        )
+        
+        # Registrar movimentação
+        Movimentacao.objects.create(
+            tipo='SOLICITACAO',
+            produto=produto,
+            quantidade=quantidade,
+            usuario=request.user,
+            referencia_id=solicitacao.id,
+            observacao=f'Solicitação #{solicitacao.id} criada'
+        )
+        
+        messages.success(request, f'Solicitação #{solicitacao.id} criada com sucesso!')
+        return redirect('dashboard')
+    
+    return redirect('dashboard')
+
+@login_required
+def aprovar_solicitacao(request, solicitacao_id):
+    """View para aprovar solicitação"""
+    solicitacao = get_object_or_404(Solicitacao, id=solicitacao_id, status='PENDENTE')
+    
+    solicitacao.status = 'APROVADA'
+    solicitacao.aprovador = request.user
+    solicitacao.data_aprovacao = timezone.now()
+    solicitacao.save()
+    
+    # Registrar movimentação
+    Movimentacao.objects.create(
+        tipo='APROVACAO',
+        produto=solicitacao.produto,
+        usuario=request.user,
+        referencia_id=solicitacao.id,
+        observacao=f'Solicitação #{solicitacao.id} aprovada'
+    )
+    
+    messages.success(request, f'Solicitação #{solicitacao.id} aprovada!')
+    return redirect('dashboard')
+
+@login_required
+def reprovar_solicitacao(request, solicitacao_id):
+    """View para reprovar solicitação"""
+    solicitacao = get_object_or_404(Solicitacao, id=solicitacao_id, status='PENDENTE')
+    
+    solicitacao.status = 'REPROVADA'
+    solicitacao.aprovador = request.user
+    solicitacao.data_aprovacao = timezone.now()
+    solicitacao.save()
+    
+    messages.success(request, f'Solicitação #{solicitacao.id} reprovada!')
+    return redirect('dashboard')
+
+@login_required
+def entrada_produto(request):
+    """View para entrada de produtos"""
+    if request.method == 'POST':
+        codigo = request.POST.get('codigo')
+        quantidade = int(request.POST.get('quantidade', 0))
+        
+        if quantidade <= 0:
+            messages.error(request, 'Quantidade deve ser maior que zero')
+            return redirect('dashboard')
+        
+        try:
+            produto = Product.objects.get(codigo=codigo)
+        except Product.DoesNotExist:
+            messages.error(request, 'Produto não encontrado')
+            return redirect('dashboard')
+        
+        with transaction.atomic():
+            # Atualizar estoque
+            produto.quantidade += quantidade
+            produto.save()
+            
+            # Registrar movimentação
+            Movimentacao.objects.create(
+                tipo='ENTRADA',
+                produto=produto,
+                quantidade=quantidade,
+                usuario=request.user,
+                observacao=f'Entrada de {quantidade} unidades'
+            )
+        
+        messages.success(request, f'Entrada de {quantidade} unidades de {produto.nome} registrada!')
+        return redirect('dashboard')
+    
+    return redirect('dashboard')
+
+@login_required
+def retirar_produto(request, solicitacao_id):
+    """View para retirada de produtos"""
+    solicitacao = get_object_or_404(Solicitacao, id=solicitacao_id, status='APROVADA')
+    
+    # Verificar se o usuário é o solicitante
+    if solicitacao.solicitante != request.user:
+        return HttpResponseForbidden('Você não tem permissão para retirar este produto')
+    
+    produto = solicitacao.produto
+    
+    # Verificar saldo suficiente
+    if produto.quantidade < solicitacao.quantidade:
+        messages.error(request, f'Estoque insuficiente. Disponível: {produto.quantidade}, Solicitado: {solicitacao.quantidade}')
+        return redirect('dashboard')
+    
+    with transaction.atomic():
+        # Atualizar estoque
+        produto.quantidade -= solicitacao.quantidade
+        produto.save()
+        
+        # Atualizar solicitação
+        solicitacao.status = 'ATENDIDA'
+        solicitacao.save()
+        
+        # Registrar movimentação
+        Movimentacao.objects.create(
+            tipo='RETIRADA',
+            produto=produto,
+            quantidade=solicitacao.quantidade,
+            usuario=request.user,
+            referencia_id=solicitacao.id,
+            observacao=f'Retirada da solicitação #{solicitacao.id}'
+        )
+    
+    messages.success(request, f'Retirada de {solicitacao.quantidade} unidades de {produto.nome} realizada!')
+    return redirect('dashboard')

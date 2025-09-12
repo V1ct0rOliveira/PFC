@@ -10,6 +10,7 @@
     </div>
 </div>
 
+<!-- Cards originais -->
 <div class="row mt-4">
     <div class="col-md-4">
         <div class="card text-center">
@@ -36,9 +37,216 @@
             <div class="card-body">
                 <h5 class="card-title">Configurações</h5>
                 <p class="card-text">Configurar conta e sistema</p>
-                <a href="#" class="btn btn-primary">Acessar</a>
+                <a href="{% url 'configuracoes' %}" class="btn btn-primary">Acessar</a>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Nova seção de Gestão de Estoque -->
+<div class="row mt-5">
+    <div class="col-12">
+        <h3>Gestão de Estoque</h3>
+        <hr>
+    </div>
+</div>
+
+<!-- Navegação por abas -->
+<ul class="nav nav-tabs mt-3" id="estoqueTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="solicitar-tab" data-bs-toggle="tab" data-bs-target="#solicitar" type="button" role="tab">Solicitar Produto</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="solicitacoes-tab" data-bs-toggle="tab" data-bs-target="#solicitacoes" type="button" role="tab">Solicitações</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="entrada-tab" data-bs-toggle="tab" data-bs-target="#entrada" type="button" role="tab">Entrada de Produto</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="retirada-tab" data-bs-toggle="tab" data-bs-target="#retirada" type="button" role="tab">Retirada de Produto</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="movimentacoes-tab" data-bs-toggle="tab" data-bs-target="#movimentacoes" type="button" role="tab">Movimentações</button>
+    </li>
+</ul>
+
+<!-- Conteúdo das abas -->
+<div class="tab-content mt-3" id="estoqueTabContent">
+    
+    <!-- Aba Solicitar Produto -->
+    <div class="tab-pane fade show active" id="solicitar" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Solicitar Produto</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'solicitar_produto' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="codigo" class="form-label">Código do Produto</label>
+                            <select class="form-select" id="codigo" name="codigo" required>
+                                <option value="">Selecione um produto</option>
+                                {% for produto in produtos %}
+                                <option value="{{ produto.codigo }}">{{ produto.codigo }} - {{ produto.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="quantidade" class="form-label">Quantidade</label>
+                            <input type="number" class="form-control" id="quantidade" name="quantidade" min="1" required>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Solicitar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Solicitações -->
+    <div class="tab-pane fade" id="solicitacoes" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Solicitações Pendentes</h5>
+            </div>
+            <div class="card-body">
+                {% if solicitacoes_pendentes %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Código</th>
+                                <th>Nome</th>
+                                <th>Quantidade</th>
+                                <th>Solicitante</th>
+                                <th>Data/Hora</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for solicitacao in solicitacoes_pendentes %}
+                            <tr>
+                                <td>{{ solicitacao.id }}</td>
+                                <td>{{ solicitacao.produto.codigo }}</td>
+                                <td>{{ solicitacao.produto.nome }}</td>
+                                <td>{{ solicitacao.quantidade }}</td>
+                                <td>{{ solicitacao.solicitante.nome }}</td>
+                                <td>{{ solicitacao.data_solicitacao|date:"d/m/Y H:i" }}</td>
+                                <td><span class="badge bg-warning">{{ solicitacao.status }}</span></td>
+                                <td>
+                                    <a href="{% url 'aprovar_solicitacao' solicitacao.id %}" class="btn btn-sm btn-success me-1">Aprovar</a>
+                                    <a href="{% url 'reprovar_solicitacao' solicitacao.id %}" class="btn btn-sm btn-danger">Reprovar</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Nenhuma solicitação pendente.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Entrada de Produto -->
+    <div class="tab-pane fade" id="entrada" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Entrada de Produto</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'entrada_produto' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="codigo_entrada" class="form-label">Código do Produto</label>
+                            <select class="form-select" id="codigo_entrada" name="codigo" required>
+                                <option value="">Selecione um produto</option>
+                                {% for produto in produtos %}
+                                <option value="{{ produto.codigo }}">{{ produto.codigo }} - {{ produto.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="quantidade_entrada" class="form-label">Quantidade</label>
+                            <input type="number" class="form-control" id="quantidade_entrada" name="quantidade" min="1" required>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success">Adicionar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Retirada de Produto -->
+    <div class="tab-pane fade" id="retirada" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Minhas Solicitações Aprovadas</h5>
+            </div>
+            <div class="card-body">
+                {% if minhas_solicitacoes_aprovadas %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Código</th>
+                                <th>Nome</th>
+                                <th>Quantidade</th>
+                                <th>Estoque Atual</th>
+                                <th>Data Aprovação</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for solicitacao in minhas_solicitacoes_aprovadas %}
+                            <tr>
+                                <td>{{ solicitacao.id }}</td>
+                                <td>{{ solicitacao.produto.codigo }}</td>
+                                <td>{{ solicitacao.produto.nome }}</td>
+                                <td>{{ solicitacao.quantidade }}</td>
+                                <td>{{ solicitacao.produto.quantidade }}</td>
+                                <td>{{ solicitacao.data_aprovacao|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    {% if solicitacao.produto.quantidade >= solicitacao.quantidade %}
+                                    <a href="{% url 'retirar_produto' solicitacao.id %}" class="btn btn-sm btn-primary">Retirar</a>
+                                    {% else %}
+                                    <span class="text-danger">Estoque insuficiente</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Você não possui solicitações aprovadas.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Movimentações -->
+    <div class="tab-pane fade" id="movimentacoes" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Movimentações (Auditoria)</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <a href="{% url 'listar_movimentacoes' %}" class="btn btn-info">Ver Todas as Movimentações</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
 </div>
 {% endblock %}

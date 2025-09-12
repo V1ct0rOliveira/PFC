@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações - Stock Flow{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Configurações</h2>
+        <p class="text-muted">Gerencie suas configurações de conta e sistema</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Dados Pessoais</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nome" class="form-label">Nome</label>
+                                <input type="text" class="form-control" id="nome" name="nome" value="{{ user.nome }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="sobrenome" class="form-label">Sobrenome</label>
+                                <input type="text" class="form-control" id="sobrenome" name="sobrenome" value="{{ user.sobrenome }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="telefone" class="form-label">Telefone</label>
+                                <input type="text" class="form-control" id="telefone" name="telefone" value="{{ user.telefone }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nova_senha" class="form-label">Nova Senha (deixe em branco para não alterar)</label>
+                        <input type="password" class="form-control" id="nova_senha" name="nova_senha">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">Voltar</a>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Informações da Conta</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Usuário:</strong> {{ user.username }}</p>
+                <p><strong>Nível de Acesso:</strong> {{ user.nivel_acesso|title }}</p>
+                <p><strong>Conta Verificada:</strong> 
+                    {% if user.is_verified %}
+                        <span class="badge bg-success">Sim</span>
+                    {% else %}
+                        <span class="badge bg-warning">Não</span>
+                    {% endif %}
+                </p>
+                <p><strong>Data de Cadastro:</strong> {{ user.date_joined|date:"d/m/Y" }}</p>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Ações Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'gerar_relatorio_pdf' %}" class="btn btn-outline-primary btn-sm d-block mb-2">Gerar Relatório PDF</a>
+                <a href="{% url 'estoque_geral' %}" class="btn btn-outline-info btn-sm d-block mb-2">Ver Estoque Geral</a>
+                <a href="{% url 'listar_movimentacoes' %}" class="btn btn-outline-secondary btn-sm d-block">Ver Movimentações</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

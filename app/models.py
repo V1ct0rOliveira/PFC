@@ -1,6 +1,7 @@
 # Importações necessárias do Django
 from django.db import models  # Para criar modelos de banco de dados
 from django.contrib.auth.models import AbstractUser  # Modelo base para usuários personalizados
+from django.utils import timezone
 
 class CustomUser(AbstractUser):
     # Modelo da tabela de usuário que estende o AbstractUser do Django
@@ -52,3 +53,41 @@ class Saidas(models.Model):
     def __str__(self):
         # Retorna uma string representando a saída
         return f"Saída de {self.quantidade} de {self.produto.nome} por {self.usuario.username} em {self.data_saida}"
+
+class Solicitacao(models.Model):
+    STATUS_CHOICES = [
+        ('PENDENTE', 'Pendente'),
+        ('APROVADA', 'Aprovada'),
+        ('REPROVADA', 'Reprovada'),
+        ('ATENDIDA', 'Atendida'),
+    ]
+    
+    produto = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantidade = models.IntegerField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDENTE')
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    solicitante = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='solicitacoes_feitas')
+    aprovador = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='solicitacoes_aprovadas', null=True, blank=True)
+    data_aprovacao = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Solicitação {self.id} - {self.produto.nome} - {self.status}"
+
+class Movimentacao(models.Model):
+    TIPO_CHOICES = [
+        ('ENTRADA', 'Entrada'),
+        ('SOLICITACAO', 'Solicitação'),
+        ('APROVACAO', 'Aprovação'),
+        ('RETIRADA', 'Retirada'),
+    ]
+    
+    tipo = models.CharField(max_length=15, choices=TIPO_CHOICES)
+    produto = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantidade = models.IntegerField(null=True, blank=True)
+    data_hora = models.DateTimeField(auto_now_add=True)
+    usuario = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    referencia_id = models.IntegerField(null=True, blank=True)  # ID da solicitação quando aplicável
+    observacao = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.tipo} - {self.produto.nome} - {self.data_hora}"
