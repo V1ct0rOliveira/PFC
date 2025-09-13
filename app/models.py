@@ -47,6 +47,7 @@ class Saidas(models.Model):
     # Contém informações sobre as saídas de produtos
     produto = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantidade = models.IntegerField()
+    destino = models.CharField(max_length=200, help_text="Para onde o produto será destinado")
     data_saida = models.DateTimeField(auto_now_add=True)
     usuario = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
@@ -64,6 +65,7 @@ class Solicitacao(models.Model):
     
     produto = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantidade = models.IntegerField()
+    destino = models.CharField(max_length=200, help_text="Para onde o produto será destinado")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDENTE')
     data_solicitacao = models.DateTimeField(auto_now_add=True)
     solicitante = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='solicitacoes_feitas')

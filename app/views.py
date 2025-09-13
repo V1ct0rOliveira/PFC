@@ -7,7 +7,7 @@ from django.http import HttpResponseForbidden
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
-from .models import CustomUser, Product, Solicitacao, Movimentacao  # Modelos personalizados da aplicação
+from .models import CustomUser, Product, Solicitacao, Movimentacao, Saidas, Entradas  # Modelos personalizados da aplicação
 
 def home(request):
     """View da página inicial do sistema"""
@@ -76,15 +76,14 @@ def dashboard(request):
     # Dados para o dashboard
     produtos = Product.objects.all()
     solicitacoes_pendentes = Solicitacao.objects.filter(status='PENDENTE').order_by('-data_solicitacao')
-    minhas_solicitacoes_aprovadas = Solicitacao.objects.filter(
-        solicitante=request.user, 
-        status='APROVADA'
-    ).order_by('-data_aprovacao')
+    entradas_recentes = Entradas.objects.select_related('produto', 'usuario').order_by('-data_entrada')[:50]
+    saidas_recentes = Saidas.objects.select_related('produto', 'usuario').order_by('-data_saida')[:50]
     
     context = {
         'produtos': produtos,
         'solicitacoes_pendentes': solicitacoes_pendentes,
-        'minhas_solicitacoes_aprovadas': minhas_solicitacoes_aprovadas,
+        'entradas_recentes': entradas_recentes,
+        'saidas_recentes': saidas_recentes,
     }
     
     return render(request, 'dashboard.html', context)
@@ -296,9 +295,14 @@ def solicitar_produto(request):
     if request.method == 'POST':
         codigo = request.POST.get('codigo')
         quantidade = int(request.POST.get('quantidade', 0))
+        destino = request.POST.get('destino', '').strip()
         
         if quantidade <= 0:
             messages.error(request, 'Quantidade deve ser maior que zero')
+            return redirect('dashboard')
+        
+        if not destino:
+            messages.error(request, 'Campo destino é obrigatório')
             return redirect('dashboard')
         
         try:
@@ -311,6 +315,7 @@ def solicitar_produto(request):
         solicitacao = Solicitacao.objects.create(
             produto=produto,
             quantidade=quantidade,
+            destino=destino,
             solicitante=request.user
         )
         
@@ -321,7 +326,7 @@ def solicitar_produto(request):
             quantidade=quantidade,
             usuario=request.user,
             referencia_id=solicitacao.id,
-            observacao=f'Solicitação #{solicitacao.id} criada'
+            observacao=f'Solicitação #{solicitacao.id} criada - Destino: {destino}'
         )
         
         messages.success(request, f'Solicitação #{solicitacao.id} criada com sucesso!')
@@ -331,24 +336,45 @@ def solicitar_produto(request):
 
 @login_required
 def aprovar_solicitacao(request, solicitacao_id):
-    """View para aprovar solicitação"""
+    """View para aprovar solicitação e executar retirada automaticamente"""
     solicitacao = get_object_or_404(Solicitacao, id=solicitacao_id, status='PENDENTE')
+    produto = solicitacao.produto
     
-    solicitacao.status = 'APROVADA'
-    solicitacao.aprovador = request.user
-    solicitacao.data_aprovacao = timezone.now()
-    solicitacao.save()
+    # Verificar se há estoque suficiente
+    if produto.quantidade < solicitacao.quantidade:
+        messages.error(request, f'Estoque insuficiente para aprovação. Disponível: {produto.quantidade}, Solicitado: {solicitacao.quantidade}')
+        return redirect('dashboard')
     
-    # Registrar movimentação
-    Movimentacao.objects.create(
-        tipo='APROVACAO',
-        produto=solicitacao.produto,
-        usuario=request.user,
-        referencia_id=solicitacao.id,
-        observacao=f'Solicitação #{solicitacao.id} aprovada'
-    )
+    with transaction.atomic():
+        # Aprovar solicitação
+        solicitacao.status = 'ATENDIDA'  # Já marca como atendida
+        solicitacao.aprovador = request.user
+        solicitacao.data_aprovacao = timezone.now()
+        solicitacao.save()
+        
+        # Executar retirada automaticamente
+        produto.quantidade -= solicitacao.quantidade
+        produto.save()
+        
+        # Criar registro de saída
+        Saidas.objects.create(
+            produto=produto,
+            quantidade=solicitacao.quantidade,
+            destino=solicitacao.destino,
+            usuario=request.user
+        )
+        
+        # Registrar movimentação
+        Movimentacao.objects.create(
+            tipo='RETIRADA',
+            produto=produto,
+            quantidade=solicitacao.quantidade,
+            usuario=request.user,
+            referencia_id=solicitacao.id,
+            observacao=f'Solicitação #{solicitacao.id} aprovada e retirada executada automaticamente - Destino: {solicitacao.destino}'
+        )
     
-    messages.success(request, f'Solicitação #{solicitacao.id} aprovada!')
+    messages.success(request, f'Solicitação #{solicitacao.id} aprovada e retirada executada automaticamente!')
     return redirect('dashboard')
 
 @login_required
@@ -386,13 +412,20 @@ def entrada_produto(request):
             produto.quantidade += quantidade
             produto.save()
             
-            # Registrar movimentação
+            # Registrar na tabela movimentação
             Movimentacao.objects.create(
                 tipo='ENTRADA',
                 produto=produto,
                 quantidade=quantidade,
                 usuario=request.user,
                 observacao=f'Entrada de {quantidade} unidades'
+            )
+
+            # Criar registro de entrada
+            Entradas.objects.create(
+                produto=produto,
+                quantidade=quantidade,
+                usuario=request.user,
             )
         
         messages.success(request, f'Entrada de {quantidade} unidades de {produto.nome} registrada!')
@@ -401,39 +434,55 @@ def entrada_produto(request):
     return redirect('dashboard')
 
 @login_required
-def retirar_produto(request, solicitacao_id):
-    """View para retirada de produtos"""
-    solicitacao = get_object_or_404(Solicitacao, id=solicitacao_id, status='APROVADA')
-    
-    # Verificar se o usuário é o solicitante
-    if solicitacao.solicitante != request.user:
-        return HttpResponseForbidden('Você não tem permissão para retirar este produto')
-    
-    produto = solicitacao.produto
-    
-    # Verificar saldo suficiente
-    if produto.quantidade < solicitacao.quantidade:
-        messages.error(request, f'Estoque insuficiente. Disponível: {produto.quantidade}, Solicitado: {solicitacao.quantidade}')
+def retirada_direta(request):
+    """View para retirada direta de produtos (sem solicitação)"""
+    if request.method == 'POST':
+        codigo = request.POST.get('codigo')
+        quantidade = int(request.POST.get('quantidade', 0))
+        destino = request.POST.get('destino', '').strip()
+        
+        if quantidade <= 0:
+            messages.error(request, 'Quantidade deve ser maior que zero')
+            return redirect('dashboard')
+        
+        if not destino:
+            messages.error(request, 'Campo destino é obrigatório')
+            return redirect('dashboard')
+        
+        try:
+            produto = Product.objects.get(codigo=codigo)
+        except Product.DoesNotExist:
+            messages.error(request, 'Produto não encontrado')
+            return redirect('dashboard')
+        
+        # Verificar estoque suficiente
+        if produto.quantidade < quantidade:
+            messages.error(request, f'Estoque insuficiente. Disponível: {produto.quantidade}, Solicitado: {quantidade}')
+            return redirect('dashboard')
+        
+        with transaction.atomic():
+            # Atualizar estoque
+            produto.quantidade -= quantidade
+            produto.save()
+            
+            # Criar registro de saída
+            Saidas.objects.create(
+                produto=produto,
+                quantidade=quantidade,
+                destino=destino,
+                usuario=request.user
+            )
+            
+            # Registrar movimentação
+            Movimentacao.objects.create(
+                tipo='RETIRADA',
+                produto=produto,
+                quantidade=quantidade,
+                usuario=request.user,
+                observacao=f'Retirada direta de {quantidade} unidades - Destino: {destino}'
+            )
+        
+        messages.success(request, f'Retirada de {quantidade} unidades de {produto.nome} realizada com sucesso!')
         return redirect('dashboard')
     
-    with transaction.atomic():
-        # Atualizar estoque
-        produto.quantidade -= solicitacao.quantidade
-        produto.save()
-        
-        # Atualizar solicitação
-        solicitacao.status = 'ATENDIDA'
-        solicitacao.save()
-        
-        # Registrar movimentação
-        Movimentacao.objects.create(
-            tipo='RETIRADA',
-            produto=produto,
-            quantidade=solicitacao.quantidade,
-            usuario=request.user,
-            referencia_id=solicitacao.id,
-            observacao=f'Retirada da solicitação #{solicitacao.id}'
-        )
-    
-    messages.success(request, f'Retirada de {solicitacao.quantidade} unidades de {produto.nome} realizada!')
     return redirect('dashboard')

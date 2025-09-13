@@ -60,10 +60,16 @@
         <button class="nav-link" id="solicitacoes-tab" data-bs-toggle="tab" data-bs-target="#solicitacoes" type="button" role="tab">Solicitações</button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="entrada-tab" data-bs-toggle="tab" data-bs-target="#entrada" type="button" role="tab">Entrada de Produto</button>
+        <button class="nav-link" id="entrada-tab" data-bs-toggle="tab" data-bs-target="#entrada" type="button" role="tab">Adicionar Produto</button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="retirada-tab" data-bs-toggle="tab" data-bs-target="#retirada" type="button" role="tab">Retirada de Produto</button>
+        <button class="nav-link" id="retirada-tab" data-bs-toggle="tab" data-bs-target="#retirada" type="button" role="tab">Retirar Produto</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="entradas-tab" data-bs-toggle="tab" data-bs-target="#entradas" type="button" role="tab">Entradas</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="saidas-tab" data-bs-toggle="tab" data-bs-target="#saidas" type="button" role="tab">Saídas</button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="movimentacoes-tab" data-bs-toggle="tab" data-bs-target="#movimentacoes" type="button" role="tab">Movimentações</button>
@@ -83,7 +89,7 @@
                 <form method="POST" action="{% url 'solicitar_produto' %}">
                     {% csrf_token %}
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="codigo" class="form-label">Código do Produto</label>
                             <select class="form-select" id="codigo" name="codigo" required>
                                 <option value="">Selecione um produto</option>
@@ -92,11 +98,15 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-2">
                             <label for="quantidade" class="form-label">Quantidade</label>
                             <input type="number" class="form-control" id="quantidade" name="quantidade" min="1" required>
                         </div>
-                        <div class="col-md-4 d-flex align-items-end">
+                        <div class="col-md-4">
+                            <label for="destino" class="form-label">Destino</label>
+                            <input type="text" class="form-control" id="destino" name="destino" placeholder="Para onde será usado o produto" required>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary">Solicitar</button>
                         </div>
                     </div>
@@ -121,6 +131,7 @@
                                 <th>Código</th>
                                 <th>Nome</th>
                                 <th>Quantidade</th>
+                                <th>Destino</th>
                                 <th>Solicitante</th>
                                 <th>Data/Hora</th>
                                 <th>Status</th>
@@ -134,11 +145,12 @@
                                 <td>{{ solicitacao.produto.codigo }}</td>
                                 <td>{{ solicitacao.produto.nome }}</td>
                                 <td>{{ solicitacao.quantidade }}</td>
+                                <td>{{ solicitacao.destino }}</td>
                                 <td>{{ solicitacao.solicitante.nome }}</td>
                                 <td>{{ solicitacao.data_solicitacao|date:"d/m/Y H:i" }}</td>
                                 <td><span class="badge bg-warning">{{ solicitacao.status }}</span></td>
                                 <td>
-                                    <a href="{% url 'aprovar_solicitacao' solicitacao.id %}" class="btn btn-sm btn-success me-1">Aprovar</a>
+                                    <a href="{% url 'aprovar_solicitacao' solicitacao.id %}" class="btn btn-sm btn-success me-1">Aprovar e Retirar</a>
                                     <a href="{% url 'reprovar_solicitacao' solicitacao.id %}" class="btn btn-sm btn-danger">Reprovar</a>
                                 </td>
                             </tr>
@@ -189,46 +201,118 @@
     <div class="tab-pane fade" id="retirada" role="tabpanel">
         <div class="card">
             <div class="card-header">
-                <h5>Minhas Solicitações Aprovadas</h5>
+                <h5>Retirada Direta de Produto</h5>
             </div>
             <div class="card-body">
-                {% if minhas_solicitacoes_aprovadas %}
+                <form method="POST" action="{% url 'retirada_direta' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="codigo_retirada" class="form-label">Código do Produto</label>
+                            <select class="form-select" id="codigo_retirada" name="codigo" required>
+                                <option value="">Selecione um produto</option>
+                                {% for produto in produtos %}
+                                <option value="{{ produto.codigo }}">{{ produto.codigo }} - {{ produto.nome }} (Estoque: {{ produto.quantidade }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="quantidade_retirada" class="form-label">Quantidade</label>
+                            <input type="number" class="form-control" id="quantidade_retirada" name="quantidade" min="1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="destino_retirada" class="form-label">Destino</label>
+                            <input type="text" class="form-control" id="destino_retirada" name="destino" placeholder="Para onde será usado o produto" required>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-danger">Retirar</button>
+                        </div>
+                    </div>
+                </form>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <strong>Nota:</strong> Esta é uma retirada direta que não requer aprovação. O produto será retirado imediatamente do estoque.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Entradas -->
+    <div class="tab-pane fade" id="entradas" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Histórico de Entradas</h5>
+            </div>
+            <div class="card-body">
+                {% if entradas_recentes %}
                 <div class="table-responsive">
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th>Data/Hora</th>
                                 <th>Código</th>
-                                <th>Nome</th>
+                                <th>Produto</th>
                                 <th>Quantidade</th>
-                                <th>Estoque Atual</th>
-                                <th>Data Aprovação</th>
-                                <th>Ação</th>
+                                <th>Usuário</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for solicitacao in minhas_solicitacoes_aprovadas %}
+                            {% for entrada in entradas_recentes %}
                             <tr>
-                                <td>{{ solicitacao.id }}</td>
-                                <td>{{ solicitacao.produto.codigo }}</td>
-                                <td>{{ solicitacao.produto.nome }}</td>
-                                <td>{{ solicitacao.quantidade }}</td>
-                                <td>{{ solicitacao.produto.quantidade }}</td>
-                                <td>{{ solicitacao.data_aprovacao|date:"d/m/Y H:i" }}</td>
-                                <td>
-                                    {% if solicitacao.produto.quantidade >= solicitacao.quantidade %}
-                                    <a href="{% url 'retirar_produto' solicitacao.id %}" class="btn btn-sm btn-primary">Retirar</a>
-                                    {% else %}
-                                    <span class="text-danger">Estoque insuficiente</span>
-                                    {% endif %}
-                                </td>
+                                <td>{{ entrada.data_entrada|date:"d/m/Y H:i" }}</td>
+                                <td>{{ entrada.produto.codigo }}</td>
+                                <td>{{ entrada.produto.nome }}</td>
+                                <td><span class="badge bg-success">+{{ entrada.quantidade }}</span></td>
+                                <td>{{ entrada.usuario.nome }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
                 {% else %}
-                <p class="text-muted">Você não possui solicitações aprovadas.</p>
+                <p class="text-muted">Nenhuma entrada registrada.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Saídas -->
+    <div class="tab-pane fade" id="saidas" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Histórico de Saídas</h5>
+            </div>
+            <div class="card-body">
+                {% if saidas_recentes %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Código</th>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Destino</th>
+                                <th>Usuário</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for saida in saidas_recentes %}
+                            <tr>
+                                <td>{{ saida.data_saida|date:"d/m/Y H:i" }}</td>
+                                <td>{{ saida.produto.codigo }}</td>
+                                <td>{{ saida.produto.nome }}</td>
+                                <td><span class="badge bg-danger">-{{ saida.quantidade }}</span></td>
+                                <td>{{ saida.destino }}</td>
+                                <td>{{ saida.usuario.nome }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Nenhuma saída registrada.</p>
                 {% endif %}
             </div>
         </div>

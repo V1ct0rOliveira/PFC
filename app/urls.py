@@ -17,7 +17,7 @@ urlpatterns = [
     path('aprovar-solicitacao/<int:solicitacao_id>/', views.aprovar_solicitacao, name='aprovar_solicitacao'),
     path('reprovar-solicitacao/<int:solicitacao_id>/', views.reprovar_solicitacao, name='reprovar_solicitacao'),
     path('entrada-produto/', views.entrada_produto, name='entrada_produto'),
-    path('retirar-produto/<int:solicitacao_id>/', views.retirar_produto, name='retirar_produto'),
+    path('retirada-direta/', views.retirada_direta, name='retirada_direta'),
     path('movimentacoes/', views.listar_movimentacoes, name='listar_movimentacoes'),
     path('configuracoes/', views.configuracoes, name='configuracoes'),
 ]
