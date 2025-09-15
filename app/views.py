@@ -165,7 +165,7 @@ def listar_movimentacoes(request):
     return render(request, 'movimentacoes.html', context)
 
 @login_required
-def configuracoes(request):
+def perfil(request):
     """View para configurações do usuário"""
     if request.method == 'POST':
         # Atualizar dados do usuário
@@ -182,9 +182,9 @@ def configuracoes(request):
         
         user.save()
         messages.success(request, 'Configurações atualizadas com sucesso!')
-        return redirect('configuracoes')
+        return redirect('perfil')
     
-    return render(request, 'configuracoes.html')
+    return render(request, 'perfil.html')
 
 @login_required  # Protege a view, apenas usuários logados podem cadastrar produtos
 def cadastro_produto(request):
