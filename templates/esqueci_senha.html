@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Esqueci minha senha - Sistema de Estoque{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Esqueci minha senha</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Digite seu email para receber um link de redefinição de senha.</p>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Enviar link de reset</button>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <p><a href="{% url 'login' %}">Voltar ao login</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

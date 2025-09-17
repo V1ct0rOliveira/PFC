@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Verificar Token - Sistema de Estoque{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Verificar Token</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Digite o token de 6 dígitos enviado para seu email.</p>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="token" class="form-label">Token</label>
+                        <input type="text" class="form-control" id="token" name="token" maxlength="6" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Verificar Token</button>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <p><a href="{% url 'esqueci_senha' %}">Solicitar novo token</a></p>
+                    <p><a href="{% url 'login' %}">Voltar ao login</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

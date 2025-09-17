@@ -7,7 +7,28 @@ from django.http import HttpResponseForbidden
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
+from decouple import config
+import re
 from .models import CustomUser, Product, Solicitacao, Movimentacao, Saidas, Entradas  # Modelos personalizados da aplicação
+
+def validar_senha_forte(senha):
+    """Valida se a senha atende aos critérios de segurança"""
+    if len(senha) < 8:
+        return False, "A senha deve ter pelo menos 8 caracteres"
+    
+    if not re.search(r'[A-Z]', senha):
+        return False, "A senha deve conter pelo menos uma letra maiúscula"
+    
+    if not re.search(r'[a-z]', senha):
+        return False, "A senha deve conter pelo menos uma letra minúscula"
+    
+    if not re.search(r'\d', senha):
+        return False, "A senha deve conter pelo menos um número"
+    
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', senha):
+        return False, "A senha deve conter pelo menos um caractere especial (!@#$%^&*(),.?\":{}|<>)"
+    
+    return True, "Senha válida"
 
 def home(request):
     """View da página inicial do sistema"""
@@ -30,6 +51,12 @@ def cadastro(request):
         # Verifica se o usuário já existe
         if CustomUser.objects.filter(username=username).exists():
             messages.error(request, 'Usuário já existe')
+            return render(request, 'cadastro.html')
+        
+        # Valida senha forte
+        senha_valida, mensagem = validar_senha_forte(password)
+        if not senha_valida:
+            messages.error(request, mensagem)
             return render(request, 'cadastro.html')
         
         # Cria novo usuário com nível de acesso padrão 'comum'
@@ -87,32 +114,6 @@ def dashboard(request):
     }
     
     return render(request, 'dashboard.html', context)
-
-def verify_2fa(request):
-    """View para verificação 2FA"""
-    if 'user_id' not in request.session:
-        return redirect('login')
-    
-    user = CustomUser.objects.get(id=request.session['user_id'])
-    
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        
-        if action == 'send_code':
-            messages.success(request, 'Código enviado para seu telefone!')
-            return render(request, 'verify_2fa.html', {'code_sent': True})
-        
-        elif action == 'verify_code':
-            code = request.POST['code']
-            # Simulação de verificação (aceita qualquer código)
-            auth_login(request, user)
-            user.is_verified = True
-            user.save()
-            del request.session['user_id']
-            messages.success(request, 'Login realizado com sucesso!')
-            return redirect('dashboard')
-    
-    return render(request, 'verify_2fa.html')
 
 def logout(request):
     """View para logout do usuário"""
@@ -178,6 +179,11 @@ def perfil(request):
         # Alterar senha se fornecida
         nova_senha = request.POST.get('nova_senha')
         if nova_senha:
+            # Valida senha forte
+            senha_valida, mensagem = validar_senha_forte(nova_senha)
+            if not senha_valida:
+                messages.error(request, mensagem)
+                return render(request, 'perfil.html')
             user.set_password(nova_senha)
         
         user.save()
@@ -288,6 +294,103 @@ def gerar_relatorio_pdf(request):
     # Gera PDF
     doc.build(elements)
     return response
+
+def esqueci_senha(request):
+    """View para solicitar reset de senha"""
+    if request.method == 'POST':
+        email = request.POST['email']
+        
+        try:
+            user = CustomUser.objects.get(email=email)
+            
+            # Gera token JWT simples (6 dígitos)
+            import random
+            token = str(random.randint(100000, 999999))
+            
+            # Salva token na sessão
+            request.session['reset_token'] = token
+            request.session['reset_user_id'] = user.id
+            request.session['token_expires'] = (timezone.now() + timezone.timedelta(minutes=15)).timestamp()
+            
+            # Envia email com token
+            from django.core.mail import send_mail
+            
+            # Envia token por email
+            send_mail(
+                'Token de Reset - Sistema de Estoque',
+                f'Seu token para redefinir a senha é: {token}\n\nEste token expira em 15 minutos.',
+                config('DEFAULT_FROM_EMAIL', default='noreply@sistema.com'),
+                [email],
+                fail_silently=False,
+            )
+            
+            messages.success(request, 'Token enviado para seu email!')
+            return redirect('verificar_token')
+            
+        except CustomUser.DoesNotExist:
+            messages.error(request, 'Email não encontrado')
+    
+    return render(request, 'esqueci_senha.html')
+
+def verificar_token(request):
+    """View para verificar token enviado por email"""
+    if 'reset_token' not in request.session:
+        messages.error(request, 'Sessão expirada. Solicite um novo token.')
+        return redirect('esqueci_senha')
+    
+    # Verifica se token expirou
+    if timezone.now().timestamp() > request.session.get('token_expires', 0):
+        del request.session['reset_token']
+        del request.session['reset_user_id']
+        del request.session['token_expires']
+        messages.error(request, 'Token expirado. Solicite um novo token.')
+        return redirect('esqueci_senha')
+    
+    if request.method == 'POST':
+        token_digitado = request.POST['token']
+        
+        if token_digitado == request.session['reset_token']:
+            # Token correto, redireciona para nova senha
+            return redirect('nova_senha')
+        else:
+            messages.error(request, 'Token inválido')
+    
+    return render(request, 'verificar_token.html')
+
+def nova_senha(request):
+    """View para definir nova senha após verificar token"""
+    if 'reset_token' not in request.session or 'reset_user_id' not in request.session:
+        messages.error(request, 'Sessão inválida. Inicie o processo novamente.')
+        return redirect('esqueci_senha')
+    
+    if request.method == 'POST':
+        nova_senha = request.POST['nova_senha']
+        confirmar_senha = request.POST['confirmar_senha']
+        
+        if nova_senha != confirmar_senha:
+            messages.error(request, 'Senhas não coincidem')
+            return render(request, 'nova_senha.html')
+        
+        # Valida senha forte
+        senha_valida, mensagem = validar_senha_forte(nova_senha)
+        if not senha_valida:
+            messages.error(request, mensagem)
+            return render(request, 'nova_senha.html')
+        
+        # Atualiza senha do usuário
+        user = CustomUser.objects.get(id=request.session['reset_user_id'])
+        user.set_password(nova_senha)
+        user.save()
+        
+        # Limpa sessão
+        del request.session['reset_token']
+        del request.session['reset_user_id']
+        del request.session['token_expires']
+        
+        messages.success(request, 'Senha alterada com sucesso!')
+        return redirect('login')
+    
+    return render(request, 'nova_senha.html')
 
 @login_required
 def solicitar_produto(request):

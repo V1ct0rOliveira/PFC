@@ -32,6 +32,12 @@ DB_USER=nome_do_user
 DB_PASSWORD=sua_senha
 DB_HOST=host_do_banco
 DB_PORT=porta_do_banco
+
+# Configurações de Email
+EMAIL_HOST_USER=email_do_site@gmail.com
+EMAIL_HOST_PASSWORD=senha_app_do_email
+EMAIL_PORT=porta_do_email
+DEFAULT_FROM_EMAIL=email_do_site@gmail.com
 ```
 
 ### 5. Executar o sistema

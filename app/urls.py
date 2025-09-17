@@ -11,6 +11,9 @@ urlpatterns = [
     path('cadastro_produto/', views.cadastro_produto, name='cadastro_produto'), 
     path('estoque_geral/', views.estoque_geral, name='estoque_geral'),
     path('gerar_relatorio_pdf/', views.gerar_relatorio_pdf, name='gerar_relatorio_pdf'),
+    path('esqueci_senha/', views.esqueci_senha, name='esqueci_senha'),
+    path('verificar_token/', views.verificar_token, name='verificar_token'),
+    path('nova_senha/', views.nova_senha, name='nova_senha'),
     
     # URLs do sistema de estoque
     path('solicitar-produto/', views.solicitar_produto, name='solicitar_produto'),
