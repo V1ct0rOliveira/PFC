@@ -1,16 +1,17 @@
-# Importações necessárias do Django
-from django.shortcuts import render, redirect, get_object_or_404  # Para renderizar templates e redirecionar
-from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout  # Sistema de autenticação
-from django.contrib.auth.decorators import login_required  # Decorator para proteger views
-from django.contrib import messages  # Sistema de mensagens para feedback ao usuário
+# Importações necessárias do Django e outras bibliotecas
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout  
+from django.contrib.auth.decorators import login_required  
+from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
 from decouple import config
 import re
-from .models import CustomUser, Product, Solicitacao, Movimentacao, Saidas, Entradas  # Modelos personalizados da aplicação
+from .models import CustomUser, Product, Solicitacao, Movimentacao, Saidas, Entradas
 
+# Função de validação de senha forte
 def validar_senha_forte(senha):
     """Valida se a senha atende aos critérios de segurança"""
     if len(senha) < 8:
@@ -30,6 +31,7 @@ def validar_senha_forte(senha):
     
     return True, "Senha válida"
 
+# Função para views
 def home(request):
     """View da página inicial do sistema"""
     # Força logout para garantir que os botões aparecem
@@ -37,6 +39,7 @@ def home(request):
         auth_logout(request)
     return render(request, 'home.html')
 
+# Função para criação de usuarios 
 def cadastro(request):
     """View para cadastro de novos usuários"""
     if request.method == 'POST':
@@ -77,6 +80,7 @@ def cadastro(request):
     # Se não for POST, renderiza o formulário de cadastro
     return render(request, 'cadastro.html')
 
+# Função de login de usuarios
 def login(request):
     """View para autenticação de usuários"""
     if request.method == 'POST':
@@ -97,7 +101,9 @@ def login(request):
     # Renderiza formulário de login
     return render(request, 'login.html')
 
-@login_required  # Decorator que exige login para acessar esta view
+
+@login_required  # Verifica se o usuário está logado
+# Função de exibição do dashboard
 def dashboard(request):
     """View do painel principal do sistema (protegida por login)"""
     # Dados para o dashboard
@@ -115,12 +121,14 @@ def dashboard(request):
     
     return render(request, 'dashboard.html', context)
 
+# Função de logout do usuario
 def logout(request):
     """View para logout do usuário"""
     auth_logout(request)  # Encerra a sessão do usuário
     return redirect('home')  # Redireciona para página inicial
 
-@login_required
+@login_required # Verifica se o usuário está logado
+# Função para listar movimentações com filtros
 def listar_movimentacoes(request):
     """View para listar movimentações com filtros"""
     movimentacoes = Movimentacao.objects.select_related('produto', 'usuario').order_by('-data_hora')
@@ -165,7 +173,8 @@ def listar_movimentacoes(request):
     
     return render(request, 'movimentacoes.html', context)
 
-@login_required
+@login_required # Verifica se o usuário está logado
+# Função para exibir dados do usuario e editar dados do usuario
 def perfil(request):
     """View para configurações do usuário"""
     if request.method == 'POST':
@@ -192,7 +201,8 @@ def perfil(request):
     
     return render(request, 'perfil.html')
 
-@login_required  # Protege a view, apenas usuários logados podem cadastrar produtos
+@login_required  # Verifica se o usuário está logado
+# Função para cadastro de produtos
 def cadastro_produto(request):
     """View para cadastro de novos produtos no estoque"""
     if request.method == 'POST':
@@ -224,7 +234,8 @@ def cadastro_produto(request):
     # Se não for POST, renderiza formulário de cadastro de produto
     return render(request, 'cadastro_produto.html')
 
-@login_required  # Protege a view, apenas usuários logados podem ver o estoque
+@login_required  # Verifica se o usuário está logado
+# Função para exibir o estoque geral de produtos
 def estoque_geral(request):
     """View para exibir o estoque geral de produtos"""
     # Recupera todos os produtos do banco de dados
@@ -233,7 +244,8 @@ def estoque_geral(request):
     # Renderiza template com os produtos
     return render(request, 'estoque_geral.html', {'produtos': produtos})
 
-@login_required
+@login_required # Verifica se o usuário está logado
+# Função para gerar relatório PDF do estoque geral
 def gerar_relatorio_pdf(request):
     """View para gerar relatório PDF do estoque"""
     from django.http import HttpResponse
@@ -295,6 +307,7 @@ def gerar_relatorio_pdf(request):
     doc.build(elements)
     return response
 
+# Função para solicitar reset de senha
 def esqueci_senha(request):
     """View para solicitar reset de senha"""
     if request.method == 'POST':
@@ -332,6 +345,7 @@ def esqueci_senha(request):
     
     return render(request, 'esqueci_senha.html')
 
+# Função para verificar o token enviado por email
 def verificar_token(request):
     """View para verificar token enviado por email"""
     if 'reset_token' not in request.session:
@@ -357,6 +371,7 @@ def verificar_token(request):
     
     return render(request, 'verificar_token.html')
 
+# Função para definir uma nova senha após verificar o token
 def nova_senha(request):
     """View para definir nova senha após verificar token"""
     if 'reset_token' not in request.session or 'reset_user_id' not in request.session:
@@ -392,7 +407,8 @@ def nova_senha(request):
     
     return render(request, 'nova_senha.html')
 
-@login_required
+@login_required # Verifica se o usuário está logado
+# Função para solicitar produtos
 def solicitar_produto(request):
     """View para solicitar produtos"""
     if request.method == 'POST':
@@ -437,7 +453,8 @@ def solicitar_produto(request):
     
     return redirect('dashboard')
 
-@login_required
+@login_required # Verifica se o usuário está logado
+# Função para aprovar solicitação e executar retirada automaticamente
 def aprovar_solicitacao(request, solicitacao_id):
     """View para aprovar solicitação e executar retirada automaticamente"""
     solicitacao = get_object_or_404(Solicitacao, id=solicitacao_id, status='PENDENTE')
@@ -480,7 +497,8 @@ def aprovar_solicitacao(request, solicitacao_id):
     messages.success(request, f'Solicitação #{solicitacao.id} aprovada e retirada executada automaticamente!')
     return redirect('dashboard')
 
-@login_required
+@login_required # Verifica se o usuário está logado
+# Função para reprovar solicitação
 def reprovar_solicitacao(request, solicitacao_id):
     """View para reprovar solicitação"""
     solicitacao = get_object_or_404(Solicitacao, id=solicitacao_id, status='PENDENTE')
@@ -493,7 +511,8 @@ def reprovar_solicitacao(request, solicitacao_id):
     messages.success(request, f'Solicitação #{solicitacao.id} reprovada!')
     return redirect('dashboard')
 
-@login_required
+@login_required # Verifica se o usuário está logado
+# Função para entrada de produtos
 def entrada_produto(request):
     """View para entrada de produtos"""
     if request.method == 'POST':
@@ -536,7 +555,8 @@ def entrada_produto(request):
     
     return redirect('dashboard')
 
-@login_required
+@login_required # Verifica se o usuário está logado
+# Função para retirada direta de produtos (sem solicitação)
 def retirada_direta(request):
     """View para retirada direta de produtos (sem solicitação)"""
     if request.method == 'POST':

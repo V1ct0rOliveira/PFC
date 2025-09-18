@@ -1,6 +1,5 @@
-# Importações necessárias do Django
-from django.db import models  # Para criar modelos de banco de dados
-from django.contrib.auth.models import AbstractUser  # Modelo base para usuários personalizados
+from django.db import models
+from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 
 class CustomUser(AbstractUser):
@@ -14,7 +13,6 @@ class CustomUser(AbstractUser):
     nivel_acesso = models.CharField(max_length=50)
 
     def __str__(self):
-        # Retorna o username como representação string do objeto
         return self.username
     
 class Product(models.Model):
@@ -27,7 +25,6 @@ class Product(models.Model):
     carencia = models.IntegerField(default=0)
 
     def __str__(self):
-        # Retorna o nome do produto como representação string do objeto
         return self.nome
     
 class Entradas(models.Model):
@@ -39,7 +36,6 @@ class Entradas(models.Model):
     usuario = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
     def __str__(self):
-        # Retorna uma string representando a entrada
         return f"Entrada de {self.quantidade} de {self.produto.nome} por {self.usuario.username} em {self.data_entrada}"
     
 class Saidas(models.Model):
@@ -52,10 +48,11 @@ class Saidas(models.Model):
     usuario = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
     def __str__(self):
-        # Retorna uma string representando a saída
         return f"Saída de {self.quantidade} de {self.produto.nome} por {self.usuario.username} em {self.data_saida}"
 
 class Solicitacao(models.Model):
+    # Model da tabela de solicitações de produtos
+    # Contém informações sobre as solicitações feitas pelos usuários
     STATUS_CHOICES = [
         ('PENDENTE', 'Pendente'),
         ('APROVADA', 'Aprovada'),
@@ -76,6 +73,8 @@ class Solicitacao(models.Model):
         return f"Solicitação {self.id} - {self.produto.nome} - {self.status}"
 
 class Movimentacao(models.Model):
+    # Model da tabela de movimentações de produtos
+    # Contém um histórico detalhado de todas as movimentações de produtos
     TIPO_CHOICES = [
         ('ENTRADA', 'Entrada'),
         ('SOLICITACAO', 'Solicitação'),
@@ -88,7 +87,7 @@ class Movimentacao(models.Model):
     quantidade = models.IntegerField(null=True, blank=True)
     data_hora = models.DateTimeField(auto_now_add=True)
     usuario = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    referencia_id = models.IntegerField(null=True, blank=True)  # ID da solicitação quando aplicável
+    referencia_id = models.IntegerField(null=True, blank=True) 
     observacao = models.TextField(blank=True)
 
     def __str__(self):
