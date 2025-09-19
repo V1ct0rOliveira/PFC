@@ -1,0 +1,256 @@
+.tela-inicial {
+  	width: 100%;
+  	position: relative;
+  	background-color: #fff;
+  	height: 1024px;
+  	overflow: hidden;
+  	text-align: left;
+  	font-size: 20px;
+  	color: #fff;
+  	font-family: Inter;
+}
+.header {
+  	position: absolute;
+  	top: 0px;
+  	left: 0px;
+  	box-shadow: 0px 10px 8px rgba(0, 0, 0, 0.25);
+  	background: linear-gradient(90deg, #091e3a, #2f80ed 50%, #2d9ee0);
+  	width: 1440px;
+  	height: 104px;
+  	overflow: hidden;
+}
+.entrar {
+  	position: absolute;
+  	top: 40px;
+  	left: 1352px;
+}
+.cadastrar {
+  	position: absolute;
+  	top: 40px;
+  	left: 1228px;
+  	display: inline-block;
+  	width: 96px;
+}
+.logo-nome {
+  	position: absolute;
+  	top: 9px;
+  	left: 22px;
+  	width: 308px;
+  	height: 85px;
+  	font-size: 40px;
+}
+.stockflow {
+  	position: absolute;
+  	top: 19px;
+  	left: 106px;
+  	display: inline-block;
+  	width: 202px;
+  	height: 47px;
+}
+.logo-nome-child {
+  	position: absolute;
+  	top: 0px;
+  	left: 0px;
+  	border-radius: 20px;
+  	width: 90px;
+  	height: 85px;
+  	object-fit: cover;
+}
+.table {
+  	position: absolute;
+  	top: 180px;
+  	left: 244px;
+  	width: 952px;
+  	height: 787px;
+  	font-size: 45px;
+  	font-family: Jomhuria;
+}
+.table-child {
+  	position: absolute;
+  	top: 0px;
+  	left: 0px;
+  	border-radius: 38px;
+  	background-color: #d9d9d9;
+  	width: 952px;
+  	height: 802px;
+}
+.linha-11 {
+  	position: absolute;
+  	top: 725px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.linha-11-child {
+  	position: absolute;
+  	top: 0px;
+  	left: 0px;
+  	border-radius: 15px;
+  	background-color: #fff;
+  	width: 317px;
+  	height: 52px;
+}
+.linha-11-item {
+  	position: absolute;
+  	top: 0px;
+  	left: 592px;
+  	border-radius: 15px;
+  	background-color: #fff;
+  	width: 305px;
+  	height: 52px;
+}
+.linha-11-inner {
+  	position: absolute;
+  	top: 0px;
+  	left: 331px;
+  	border-radius: 15px;
+  	background-color: #fff;
+  	width: 247px;
+  	height: 52px;
+}
+.linha-10 {
+  	position: absolute;
+  	top: 663px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.linha-9 {
+  	position: absolute;
+  	top: 600px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.linha-8 {
+  	position: absolute;
+  	top: 537px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.linha-7 {
+  	position: absolute;
+  	top: 474px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.linha-6 {
+  	position: absolute;
+  	top: 411px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.linha-5 {
+  	position: absolute;
+  	top: 349px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.linha-4 {
+  	position: absolute;
+  	top: 285px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.linha-3 {
+  	position: absolute;
+  	top: 222px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.linha-2 {
+  	position: absolute;
+  	top: 159px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.linha-1 {
+  	position: absolute;
+  	top: 96px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.titulos {
+  	position: absolute;
+  	top: 23px;
+  	left: 29px;
+  	width: 897px;
+  	height: 52px;
+}
+.local {
+  	position: absolute;
+  	top: 0px;
+  	left: 592px;
+  	width: 305px;
+  	height: 52px;
+}
+.local-child {
+  	position: absolute;
+  	top: 0px;
+  	left: 0px;
+  	border-radius: 15px;
+  	background-color: #091e3a;
+  	width: 305px;
+  	height: 52px;
+}
+.tela-inicial-local {
+  	position: absolute;
+  	top: 7px;
+  	left: 124px;
+  	display: inline-block;
+  	width: 57px;
+  	height: 37px;
+}
+.quantidade {
+  	position: absolute;
+  	top: 0px;
+  	left: 331px;
+  	width: 247px;
+  	height: 52px;
+}
+.quantidade-child {
+  	position: absolute;
+  	top: 0px;
+  	left: 0px;
+  	border-radius: 15px;
+  	background-color: #091e3a;
+  	width: 247px;
+  	height: 52px;
+}
+.tela-inicial-quantidade {
+  	position: absolute;
+  	top: 7px;
+  	left: 61px;
+}
+.nome {
+  	position: absolute;
+  	top: 0px;
+  	left: 0px;
+  	width: 317px;
+  	height: 52px;
+}
+.nome-child {
+  	position: absolute;
+  	top: 0px;
+  	left: 0px;
+  	border-radius: 15px;
+  	background-color: #091e3a;
+  	width: 317px;
+  	height: 52px;
+}
+.tela-inicial-nome {
+  	position: absolute;
+  	top: 7px;
+  	left: 126px;
+  	display: inline-block;
+  	width: 66px;
+  	height: 37px;
+}
