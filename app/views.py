@@ -80,25 +80,28 @@ def cadastro(request):
     # Se não for POST, renderiza o formulário de cadastro
     return render(request, 'cadastro.html')
 
-# Função de login de usuarios
 def login(request):
     """View para autenticação de usuários"""
     if request.method == 'POST':
-        # Captura credenciais do formulário
         username = request.POST['username']
         password = request.POST['password']
         
-        # Autentica o usuário
+        # Verifica se o usuario tem a autenticação 2FA habilitada ou não
+        # Se tem, ele irá redirecionar para a página de verificação do TOTP
+        # Se não tem, ele irá redirecionar para a página de configuração do TOTP
         user = authenticate(request, username=username, password=password)
         if user:
-            # Login direto sem 2FA
-            auth_login(request, user)
-            return redirect('dashboard')
+            if not user.totp_enabled:
+                # Primeira vez - configurar TOTP
+                request.session['setup_user_id'] = user.id
+                return redirect('setup_totp')
+            else:
+                # Verificar TOTP
+                request.session['login_user_id'] = user.id
+                return redirect('verify_totp')
         else:
-            # Credenciais inválidas, exibe mensagem de erro
             messages.error(request, 'Credenciais inválidas')
     
-    # Renderiza formulário de login
     return render(request, 'login.html')
 
 
@@ -608,4 +611,94 @@ def retirada_direta(request):
         messages.success(request, f'Retirada de {quantidade} unidades de {produto.nome} realizada com sucesso!')
         return redirect('dashboard')
     
+    return redirect('dashboard')
+
+def setup_totp(request):
+    """Configuração inicial do TOTP"""
+    if 'setup_user_id' not in request.session:
+        return redirect('login')
+    
+    user = CustomUser.objects.get(id=request.session['setup_user_id'])
+    
+    if request.method == 'POST':
+        import pyotp
+        token = request.POST['token']
+        
+        totp = pyotp.TOTP(user.totp_secret)
+        if totp.verify(token):
+            user.totp_enabled = True
+            user.save()
+            auth_login(request, user)
+            del request.session['setup_user_id']
+            messages.success(request, 'Autenticação 2FA configurada com sucesso!')
+            return redirect('dashboard')
+        else:
+            messages.error(request, 'Código inválido')
+    
+    # Gera secret se não existir
+    if not user.totp_secret:
+        import pyotp
+        user.totp_secret = pyotp.random_base32()
+        user.save()
+    
+    # Gera QR Code
+    import pyotp
+    import qrcode
+    from io import BytesIO
+    import base64
+    
+    totp = pyotp.TOTP(user.totp_secret)
+    provisioning_uri = totp.provisioning_uri(
+        name=user.username,
+        issuer_name="Stock Flow"
+    )
+    
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(provisioning_uri)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    qr_code = base64.b64encode(buffer.getvalue()).decode()
+    
+    return render(request, 'setup_totp.html', {
+        'qr_code': qr_code,
+        'secret': user.totp_secret
+    })
+
+def verify_totp(request):
+    """Verificação do TOTP no login"""
+    if 'login_user_id' not in request.session:
+        return redirect('login')
+    
+    user = CustomUser.objects.get(id=request.session['login_user_id'])
+    
+    if request.method == 'POST':
+        import pyotp
+        token = request.POST['token']
+        
+        totp = pyotp.TOTP(user.totp_secret)
+        if totp.verify(token):
+            auth_login(request, user)
+            del request.session['login_user_id']
+            return redirect('dashboard')
+        else:
+            messages.error(request, 'Código inválido')
+    
+    return render(request, 'verify_totp.html')
+
+@login_required
+def reset_user_totp(request, user_id):
+    """Reset TOTP de outro usuário (apenas superadmin)"""
+    if request.user.nivel_acesso != 'superadmin':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard')
+    
+    user = get_object_or_404(CustomUser, id=user_id)
+    user.totp_secret = None
+    user.totp_enabled = False
+    user.save()
+    
+    messages.success(request, f'Autenticação 2FA resetada para {user.username}')
     return redirect('dashboard')

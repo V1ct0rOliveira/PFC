@@ -2,4 +2,6 @@ Django
 python-decouple
 psycopg2-binary
 reportlab
+pyotp
+qrcode[pil]
 PyJWT

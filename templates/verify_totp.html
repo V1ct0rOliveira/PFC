@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Verificação 2FA{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Autenticação em Duas Etapas</h4>
+            </div>
+            <div class="card-body">
+                <p>Digite o código de 6 dígitos do seu aplicativo autenticador:</p>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="token" class="form-label">Código do Authenticator</label>
+                        <input type="text" class="form-control" id="token" name="token" maxlength="6" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Verificar</button>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <p><a href="{% url 'login' %}">Voltar ao login</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Configurar Autenticação 2FA{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>Configurar Autenticação em Duas Etapas</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>1. Escaneie o QR Code</h5>
+                        <p>Use um app como Google Authenticator, Authy ou Microsoft Authenticator:</p>
+                        <div class="text-center">
+                            <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="img-fluid">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>2. Ou digite o código manualmente</h5>
+                        <p>Código secreto:</p>
+                        <code>{{ secret }}</code>
+                        
+                        <h5 class="mt-4">3. Digite o código do app</h5>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="token" class="form-label">Código de 6 dígitos</label>
+                                <input type="text" class="form-control" id="token" name="token" maxlength="6" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Confirmar e Ativar 2FA</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

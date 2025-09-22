@@ -11,6 +11,8 @@ class CustomUser(AbstractUser):
     sobrenome = models.CharField(max_length=100)
     is_verified = models.BooleanField(default=False)
     nivel_acesso = models.CharField(max_length=50)
+    totp_secret = models.CharField(max_length=32, blank=True, null=True)
+    totp_enabled = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username
@@ -43,7 +45,7 @@ class Saidas(models.Model):
     # Contém informações sobre as saídas de produtos
     produto = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantidade = models.IntegerField()
-    destino = models.CharField(max_length=200, help_text="Para onde o produto será destinado")
+    destino = models.CharField(max_length=200, help_text="Para onde o produto será destinado", default="Não especificado")
     data_saida = models.DateTimeField(auto_now_add=True)
     usuario = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
@@ -62,7 +64,7 @@ class Solicitacao(models.Model):
     
     produto = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantidade = models.IntegerField()
-    destino = models.CharField(max_length=200, help_text="Para onde o produto será destinado")
+    destino = models.CharField(max_length=200, help_text="Para onde o produto será destinado", default="Não especificado")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDENTE')
     data_solicitacao = models.DateTimeField(auto_now_add=True)
     solicitante = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='solicitacoes_feitas')

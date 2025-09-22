@@ -14,6 +14,9 @@ urlpatterns = [
     path('esqueci_senha/', views.esqueci_senha, name='esqueci_senha'),
     path('verificar_token/', views.verificar_token, name='verificar_token'),
     path('nova_senha/', views.nova_senha, name='nova_senha'),
+    path('setup_totp/', views.setup_totp, name='setup_totp'),
+    path('verify_totp/', views.verify_totp, name='verify_totp'),
+    path('reset_user_totp/<int:user_id>/', views.reset_user_totp, name='reset_user_totp'),
 
     # URLs de geração de relatórios
     path('gerar_relatorio_pdf/', views.gerar_relatorio_pdf, name='gerar_relatorio_pdf'),
