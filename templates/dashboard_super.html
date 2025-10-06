@@ -35,9 +35,19 @@
     <div class="col-md-4">
         <div class="card text-center">
             <div class="card-body">
-                <h5 class="card-title">Perfil</h5>
-                <p class="card-text">Ver ou atualizar seu perfil</p>
-                <a href="{% url 'perfil' %}" class="btn btn-primary">Acessar</a>
+                <h5 class="card-title">Admin</h5>
+                <p class="card-text">Acessar admin do Django</p>
+                <a href="{% url 'admin:index' %}" class="btn btn-primary">Acessar</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Reset do Authenticator</h5>
+                <p class="card-text">Acessar tabela de usuários</p>
+                <a href="{% url 'tabela_usuarios' %}" class="btn btn-primary">Acessar</a>
             </div>
         </div>
     </div>

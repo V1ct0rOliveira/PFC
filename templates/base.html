@@ -18,7 +18,14 @@
             </a>
             <div class="navbar-nav ms-auto">
                 {% if user.is_authenticated %}
-                    <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
+                    {% if user.nivel_acesso == 'comum' %}
+                        <a class="nav-link" href="{% url 'dashboard_comum' %}">Dashboard</a>
+                    {% elif user.nivel_acesso == 'admin' %}
+                        <a class="nav-link" href="{% url 'dashboard_admin' %}">Dashboard</a>
+                    {% elif user.nivel_acesso == 'super' %}
+                        <a class="nav-link" href="{% url 'dashboard_super' %}">Dashboard</a>
+                    {% endif %}
+                    <a class="nav-link" href="{% url 'perfil' %}">Perfil</a>
                     <a class="nav-link" href="{% url 'logout' %}">Sair</a>
                 {% else %}
                 {% endif %}

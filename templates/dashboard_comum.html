@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Usuário Comum{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Dashboard - Usuário Comum</h2>
+        <p>Bem-vindo, {{ user.nome }}!</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Estoque Geral</h5>
+            </div>
+            <div class="card-body">
+                <p>Visualize todos os produtos disponíveis no estoque.</p>
+                <a href="{% url 'estoque_geral' %}" class="btn btn-primary">Ver Estoque</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Solicitar Produto</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'solicitar_produto' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="codigo" class="form-label">Código do Produto</label>
+                        <input type="text" class="form-control" id="codigo" name="codigo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantidade" class="form-label">Quantidade</label>
+                        <input type="number" class="form-control" id="quantidade" name="quantidade" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="destino" class="form-label">Destino</label>
+                        <input type="text" class="form-control" id="destino" name="destino" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Solicitar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Minhas Solicitações Recentes</h5>
+            </div>
+            <div class="card-body">
+                {% if minhas_solicitacoes %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Produto</th>
+                                    <th>Quantidade</th>
+                                    <th>Destino</th>
+                                    <th>Status</th>
+                                    <th>Data</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for solicitacao in minhas_solicitacoes %}
+                                <tr>
+                                    <td>{{ solicitacao.id }}</td>
+                                    <td>{{ solicitacao.produto.nome }}</td>
+                                    <td>{{ solicitacao.quantidade }}</td>
+                                    <td>{{ solicitacao.destino }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if solicitacao.status == 'PENDENTE' %}warning{% elif solicitacao.status == 'ATENDIDA' %}success{% else %}danger{% endif %}">
+                                            {{ solicitacao.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ solicitacao.data_solicitacao|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p>Nenhuma solicitação encontrada.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

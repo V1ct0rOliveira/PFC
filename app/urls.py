@@ -10,6 +10,9 @@ urlpatterns = [
     path('login/', views.login, name='login'),
     path('perfil/', views.perfil, name='perfil'),
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('dashboard_comum/', views.dashboard_comum, name='dashboard_comum'),
+    path('dashboard_admin/', views.dashboard_admin, name='dashboard_admin'),
+    path('dashboard_super/', views.dashboard_super, name='dashboard_super'),
     path('logout/', views.logout, name='logout'),
     path('esqueci_senha/', views.esqueci_senha, name='esqueci_senha'),
     path('verificar_token/', views.verificar_token, name='verificar_token'),
@@ -17,6 +20,7 @@ urlpatterns = [
     path('setup_totp/', views.setup_totp, name='setup_totp'),
     path('verify_totp/', views.verify_totp, name='verify_totp'),
     path('reset_user_totp/<int:user_id>/', views.reset_user_totp, name='reset_user_totp'),
+    path('tabela_usuarios/', views.tabela_usuarios, name='tabela_usuarios'),
 
     # URLs de geração de relatórios
     path('gerar_relatorio_pdf/', views.gerar_relatorio_pdf, name='gerar_relatorio_pdf'),

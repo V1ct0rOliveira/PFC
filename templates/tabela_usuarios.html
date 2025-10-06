@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Tabela de Usuários - Stock Flow{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Tabela de Usuários</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                {% if usuarios %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Usuário</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for usuario in usuarios %}
+                            <tr>
+                                <td>{{ usuario.nome }} {{ usuario.sobrenome }}</td>
+                                <td>{{ usuario.username }}</td>
+                                <td>
+                                    {% if usuario.totp_enabled %}
+                                        <span class="badge bg-success">2FA Ativo</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">2FA Inativo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if usuario.totp_enabled %}
+                                        <a href="{% url 'reset_user_totp' usuario.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja resetar o 2FA deste usuário?')">Resetar 2FA</a>
+                                    {% else %}
+                                        <span class="text-muted">2FA não configurado</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Nenhum usuário encontrado.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

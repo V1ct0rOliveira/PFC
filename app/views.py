@@ -105,11 +105,35 @@ def login(request):
     return render(request, 'login.html')
 
 
-@login_required  # Verifica se o usuário está logado
-# Função de exibição do dashboard
+@login_required
 def dashboard(request):
-    """View do painel principal do sistema (protegida por login)"""
-    # Dados para o dashboard
+    """Redireciona para dashboard específico baseado no nível de acesso"""
+    if request.user.nivel_acesso == 'comum':
+        return redirect('dashboard_comum')
+    elif request.user.nivel_acesso == 'admin':
+        return redirect('dashboard_admin')
+    elif request.user.nivel_acesso == 'superadmin':
+        return redirect('dashboard_super')
+
+@login_required
+def dashboard_comum(request):
+    """Dashboard para usuários comuns"""
+    produtos = Product.objects.all()
+    minhas_solicitacoes = Solicitacao.objects.filter(solicitante=request.user).order_by('-data_solicitacao')[:10]
+    
+    context = {
+        'produtos': produtos,
+        'minhas_solicitacoes': minhas_solicitacoes,
+    }
+    return render(request, 'dashboard_comum.html', context)
+
+@login_required
+def dashboard_admin(request):
+    """Dashboard para administradores"""
+    if request.user.nivel_acesso not in ['admin', 'superadmin']:
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_comum')
+    
     produtos = Product.objects.all()
     solicitacoes_pendentes = Solicitacao.objects.filter(status='PENDENTE').order_by('-data_solicitacao')
     entradas_recentes = Entradas.objects.select_related('produto', 'usuario').order_by('-data_entrada')[:50]
@@ -121,8 +145,29 @@ def dashboard(request):
         'entradas_recentes': entradas_recentes,
         'saidas_recentes': saidas_recentes,
     }
+    return render(request, 'dashboard_admin.html', context)
+
+@login_required
+def dashboard_super(request):
+    """Dashboard para superadministradores"""
+    if request.user.nivel_acesso != 'superadmin':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_comum')
     
-    return render(request, 'dashboard.html', context)
+    produtos = Product.objects.all()
+    solicitacoes_pendentes = Solicitacao.objects.filter(status='PENDENTE').order_by('-data_solicitacao')
+    entradas_recentes = Entradas.objects.select_related('produto', 'usuario').order_by('-data_entrada')[:50]
+    saidas_recentes = Saidas.objects.select_related('produto', 'usuario').order_by('-data_saida')[:50]
+    usuarios = CustomUser.objects.all()
+    
+    context = {
+        'produtos': produtos,
+        'solicitacoes_pendentes': solicitacoes_pendentes,
+        'entradas_recentes': entradas_recentes,
+        'saidas_recentes': saidas_recentes,
+        'usuarios': usuarios,
+    }
+    return render(request, 'dashboard_super.html', context)
 
 # Função de logout do usuario
 def logout(request):
@@ -130,10 +175,13 @@ def logout(request):
     auth_logout(request)  # Encerra a sessão do usuário
     return redirect('home')  # Redireciona para página inicial
 
-@login_required # Verifica se o usuário está logado
-# Função para listar movimentações com filtros
+@login_required
 def listar_movimentacoes(request):
-    """View para listar movimentações com filtros"""
+    """View para listar movimentações com filtros - BLOQUEADA para usuário comum"""
+    if request.user.nivel_acesso == 'comum':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_comum')
+    
     movimentacoes = Movimentacao.objects.select_related('produto', 'usuario').order_by('-data_hora')
     
     # Filtros
@@ -176,22 +224,17 @@ def listar_movimentacoes(request):
     
     return render(request, 'movimentacoes.html', context)
 
-@login_required # Verifica se o usuário está logado
-# Função para exibir dados do usuario e editar dados do usuario
+@login_required
 def perfil(request):
-    """View para configurações do usuário"""
     if request.method == 'POST':
-        # Atualizar dados do usuário
         user = request.user
         user.nome = request.POST.get('nome', user.nome)
         user.sobrenome = request.POST.get('sobrenome', user.sobrenome)
         user.email = request.POST.get('email', user.email)
         user.telefone = request.POST.get('telefone', user.telefone)
         
-        # Alterar senha se fornecida
         nova_senha = request.POST.get('nova_senha')
         if nova_senha:
-            # Valida senha forte
             senha_valida, mensagem = validar_senha_forte(nova_senha)
             if not senha_valida:
                 messages.error(request, mensagem)
@@ -204,10 +247,13 @@ def perfil(request):
     
     return render(request, 'perfil.html')
 
-@login_required  # Verifica se o usuário está logado
-# Função para cadastro de produtos
+@login_required
 def cadastro_produto(request):
-    """View para cadastro de novos produtos no estoque"""
+    """View para cadastro de novos produtos no estoque - BLOQUEADA para usuário comum"""
+    if request.user.nivel_acesso == 'comum':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_comum')
+    
     if request.method == 'POST':
         # Captura dados do formulário de produto
         nome = request.POST['nome']
@@ -232,7 +278,12 @@ def cadastro_produto(request):
         
         # Mensagem de sucesso e redirecionamento para dashboard
         messages.success(request, 'Produto cadastrado com sucesso!')
-        return redirect('dashboard')
+        if request.user.nivel_acesso == 'comum':
+            return redirect('dashboard_comum')
+        elif request.user.nivel_acesso == 'admin':
+            return redirect('dashboard_admin')
+        else:
+            return redirect('dashboard_super')
     
     # Se não for POST, renderiza formulário de cadastro de produto
     return render(request, 'cadastro_produto.html')
@@ -247,10 +298,13 @@ def estoque_geral(request):
     # Renderiza template com os produtos
     return render(request, 'estoque_geral.html', {'produtos': produtos})
 
-@login_required # Verifica se o usuário está logado
-# Função para gerar relatório PDF do estoque geral
+@login_required
 def gerar_relatorio_pdf(request):
-    """View para gerar relatório PDF do estoque"""
+    """View para gerar relatório PDF do estoque - BLOQUEADA para usuário comum"""
+    if request.user.nivel_acesso == 'comum':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_comum')
+    
     from django.http import HttpResponse
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import A4
@@ -421,17 +475,32 @@ def solicitar_produto(request):
         
         if quantidade <= 0:
             messages.error(request, 'Quantidade deve ser maior que zero')
-            return redirect('dashboard')
+            if request.user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif request.user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            else:
+                return redirect('dashboard_super')
         
         if not destino:
             messages.error(request, 'Campo destino é obrigatório')
-            return redirect('dashboard')
+            if request.user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif request.user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            else:
+                return redirect('dashboard_super')
         
         try:
             produto = Product.objects.get(codigo=codigo)
         except Product.DoesNotExist:
             messages.error(request, 'Produto não encontrado')
-            return redirect('dashboard')
+            if request.user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif request.user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            else:
+                return redirect('dashboard_super')
         
         # Criar solicitação
         solicitacao = Solicitacao.objects.create(
@@ -452,9 +521,19 @@ def solicitar_produto(request):
         )
         
         messages.success(request, f'Solicitação #{solicitacao.id} criada com sucesso!')
-        return redirect('dashboard')
+        if request.user.nivel_acesso == 'comum':
+            return redirect('dashboard_comum')
+        elif request.user.nivel_acesso == 'admin':
+            return redirect('dashboard_admin')
+        else:
+            return redirect('dashboard_super')
     
-    return redirect('dashboard')
+    if request.user.nivel_acesso == 'comum':
+        return redirect('dashboard_comum')
+    elif request.user.nivel_acesso == 'admin':
+        return redirect('dashboard_admin')
+    else:
+        return redirect('dashboard_super')
 
 @login_required # Verifica se o usuário está logado
 # Função para aprovar solicitação e executar retirada automaticamente
@@ -466,7 +545,12 @@ def aprovar_solicitacao(request, solicitacao_id):
     # Verificar se há estoque suficiente
     if produto.quantidade < solicitacao.quantidade:
         messages.error(request, f'Estoque insuficiente para aprovação. Disponível: {produto.quantidade}, Solicitado: {solicitacao.quantidade}')
-        return redirect('dashboard')
+        if request.user.nivel_acesso == 'comum':
+            return redirect('dashboard_comum')
+        elif request.user.nivel_acesso == 'admin':
+            return redirect('dashboard_admin')
+        else:
+            return redirect('dashboard_super')
     
     with transaction.atomic():
         # Aprovar solicitação
@@ -498,7 +582,12 @@ def aprovar_solicitacao(request, solicitacao_id):
         )
     
     messages.success(request, f'Solicitação #{solicitacao.id} aprovada e retirada executada automaticamente!')
-    return redirect('dashboard')
+    if request.user.nivel_acesso == 'comum':
+        return redirect('dashboard_comum')
+    elif request.user.nivel_acesso == 'admin':
+        return redirect('dashboard_admin')
+    else:
+        return redirect('dashboard_super')
 
 @login_required # Verifica se o usuário está logado
 # Função para reprovar solicitação
@@ -512,7 +601,12 @@ def reprovar_solicitacao(request, solicitacao_id):
     solicitacao.save()
     
     messages.success(request, f'Solicitação #{solicitacao.id} reprovada!')
-    return redirect('dashboard')
+    if request.user.nivel_acesso == 'comum':
+        return redirect('dashboard_comum')
+    elif request.user.nivel_acesso == 'admin':
+        return redirect('dashboard_admin')
+    else:
+        return redirect('dashboard_super')
 
 @login_required # Verifica se o usuário está logado
 # Função para entrada de produtos
@@ -524,13 +618,23 @@ def entrada_produto(request):
         
         if quantidade <= 0:
             messages.error(request, 'Quantidade deve ser maior que zero')
-            return redirect('dashboard')
+            if request.user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif request.user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            else:
+                return redirect('dashboard_super')
         
         try:
             produto = Product.objects.get(codigo=codigo)
         except Product.DoesNotExist:
             messages.error(request, 'Produto não encontrado')
-            return redirect('dashboard')
+            if request.user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif request.user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            else:
+                return redirect('dashboard_super')
         
         with transaction.atomic():
             # Atualizar estoque
@@ -554,9 +658,19 @@ def entrada_produto(request):
             )
         
         messages.success(request, f'Entrada de {quantidade} unidades de {produto.nome} registrada!')
-        return redirect('dashboard')
+        if request.user.nivel_acesso == 'comum':
+            return redirect('dashboard_comum')
+        elif request.user.nivel_acesso == 'admin':
+            return redirect('dashboard_admin')
+        else:
+            return redirect('dashboard_super')
     
-    return redirect('dashboard')
+    if request.user.nivel_acesso == 'comum':
+        return redirect('dashboard_comum')
+    elif request.user.nivel_acesso == 'admin':
+        return redirect('dashboard_admin')
+    else:
+        return redirect('dashboard_super')
 
 @login_required # Verifica se o usuário está logado
 # Função para retirada direta de produtos (sem solicitação)
@@ -569,22 +683,42 @@ def retirada_direta(request):
         
         if quantidade <= 0:
             messages.error(request, 'Quantidade deve ser maior que zero')
-            return redirect('dashboard')
+            if request.user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif request.user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            else:
+                return redirect('dashboard_super')
         
         if not destino:
             messages.error(request, 'Campo destino é obrigatório')
-            return redirect('dashboard')
+            if request.user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif request.user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            else:
+                return redirect('dashboard_super')
         
         try:
             produto = Product.objects.get(codigo=codigo)
         except Product.DoesNotExist:
             messages.error(request, 'Produto não encontrado')
-            return redirect('dashboard')
+            if request.user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif request.user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            else:
+                return redirect('dashboard_super')
         
         # Verificar estoque suficiente
         if produto.quantidade < quantidade:
             messages.error(request, f'Estoque insuficiente. Disponível: {produto.quantidade}, Solicitado: {quantidade}')
-            return redirect('dashboard')
+            if request.user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif request.user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            else:
+                return redirect('dashboard_super')
         
         with transaction.atomic():
             # Atualizar estoque
@@ -609,9 +743,19 @@ def retirada_direta(request):
             )
         
         messages.success(request, f'Retirada de {quantidade} unidades de {produto.nome} realizada com sucesso!')
-        return redirect('dashboard')
+        if request.user.nivel_acesso == 'comum':
+            return redirect('dashboard_comum')
+        elif request.user.nivel_acesso == 'admin':
+            return redirect('dashboard_admin')
+        else:
+            return redirect('dashboard_super')
     
-    return redirect('dashboard')
+    if request.user.nivel_acesso == 'comum':
+        return redirect('dashboard_comum')
+    elif request.user.nivel_acesso == 'admin':
+        return redirect('dashboard_admin')
+    else:
+        return redirect('dashboard_super')
 
 def setup_totp(request):
     """Configuração inicial do TOTP"""
@@ -631,7 +775,12 @@ def setup_totp(request):
             auth_login(request, user)
             del request.session['setup_user_id']
             messages.success(request, 'Autenticação 2FA configurada com sucesso!')
-            return redirect('dashboard')
+            if user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            elif user.nivel_acesso == 'superadmin':
+                return redirect('dashboard_super')
         else:
             messages.error(request, 'Código inválido')
     
@@ -682,7 +831,14 @@ def verify_totp(request):
         if totp.verify(token):
             auth_login(request, user)
             del request.session['login_user_id']
-            return redirect('dashboard')
+            
+            # Redirecionamento para a dashboard com base no nivel de acesso
+            if user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            elif user.nivel_acesso == 'superadmin':
+                return redirect('dashboard_super')
         else:
             messages.error(request, 'Código inválido')
     
@@ -693,7 +849,7 @@ def reset_user_totp(request, user_id):
     """Reset TOTP de outro usuário (apenas superadmin)"""
     if request.user.nivel_acesso != 'superadmin':
         messages.error(request, 'Acesso negado')
-        return redirect('dashboard')
+        return redirect('dashboard_super')
     
     user = get_object_or_404(CustomUser, id=user_id)
     user.totp_secret = None
@@ -701,4 +857,17 @@ def reset_user_totp(request, user_id):
     user.save()
     
     messages.success(request, f'Autenticação 2FA resetada para {user.username}')
-    return redirect('dashboard')
+    return redirect('dashboard_super')
+
+def tabela_usuarios(request):
+    """View para exibir tabela de usuários - BLOQUEADA para usuário comum"""
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    if request.user.nivel_acesso == 'comum':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_comum')
+    
+    usuarios = CustomUser.objects.all().order_by('username')
+    
+    return render(request, 'tabela_usuarios.html', {'usuarios': usuarios})

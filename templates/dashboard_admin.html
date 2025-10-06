@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Stock Flow{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Bem-vindo, {{ user.nome }}!</h2>
+        <p class="text-muted">Nível de acesso: {{ user.nivel_acesso|title }}</p>
+    </div>
+</div>
+
+<!-- Cards originais -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Estoque</h5>
+                <p class="card-text">Cadastrar produto</p>
+                <a href="{% url 'cadastro_produto' %}" class="btn btn-primary">Acessar</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Estoque</h5>
+                <p class="card-text">Acessar estoque geral</p>
+                <a href="{% url 'estoque_geral' %}" class="btn btn-primary">Acessar</a>
+            </div>
+        </div>
+    </div>  
+</div>
+
+<!-- Nova seção de Gestão de Estoque -->
+<div class="row mt-5">
+    <div class="col-12">
+        <h3>Gestão de Estoque</h3>
+        <hr>
+    </div>
+</div>
+
+<!-- Navegação por abas -->
+<ul class="nav nav-tabs mt-3" id="estoqueTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="solicitar-tab" data-bs-toggle="tab" data-bs-target="#solicitar" type="button" role="tab">Solicitar Produto</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="solicitacoes-tab" data-bs-toggle="tab" data-bs-target="#solicitacoes" type="button" role="tab">Solicitações</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="entrada-tab" data-bs-toggle="tab" data-bs-target="#entrada" type="button" role="tab">Adicionar Produto</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="retirada-tab" data-bs-toggle="tab" data-bs-target="#retirada" type="button" role="tab">Retirar Produto</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="entradas-tab" data-bs-toggle="tab" data-bs-target="#entradas" type="button" role="tab">Entradas</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="saidas-tab" data-bs-toggle="tab" data-bs-target="#saidas" type="button" role="tab">Saídas</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="movimentacoes-tab" data-bs-toggle="tab" data-bs-target="#movimentacoes" type="button" role="tab">Movimentações</button>
+    </li>
+</ul>
+
+<!-- Conteúdo das abas -->
+<div class="tab-content mt-3" id="estoqueTabContent">
+    
+    <!-- Aba Solicitar Produto -->
+    <div class="tab-pane fade show active" id="solicitar" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Solicitar Produto</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'solicitar_produto' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="codigo" class="form-label">Código do Produto</label>
+                            <select class="form-select" id="codigo" name="codigo" required>
+                                <option value="">Selecione um produto</option>
+                                {% for produto in produtos %}
+                                <option value="{{ produto.codigo }}">{{ produto.codigo }} - {{ produto.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="quantidade" class="form-label">Quantidade</label>
+                            <input type="number" class="form-control" id="quantidade" name="quantidade" min="1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="destino" class="form-label">Destino</label>
+                            <input type="text" class="form-control" id="destino" name="destino" placeholder="Para onde será usado o produto" required>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Solicitar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Solicitações -->
+    <div class="tab-pane fade" id="solicitacoes" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Solicitações Pendentes</h5>
+            </div>
+            <div class="card-body">
+                {% if solicitacoes_pendentes %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Código</th>
+                                <th>Nome</th>
+                                <th>Quantidade</th>
+                                <th>Destino</th>
+                                <th>Solicitante</th>
+                                <th>Data/Hora</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for solicitacao in solicitacoes_pendentes %}
+                            <tr>
+                                <td>{{ solicitacao.id }}</td>
+                                <td>{{ solicitacao.produto.codigo }}</td>
+                                <td>{{ solicitacao.produto.nome }}</td>
+                                <td>{{ solicitacao.quantidade }}</td>
+                                <td>{{ solicitacao.destino }}</td>
+                                <td>{{ solicitacao.solicitante.nome }}</td>
+                                <td>{{ solicitacao.data_solicitacao|date:"d/m/Y H:i" }}</td>
+                                <td><span class="badge bg-warning">{{ solicitacao.status }}</span></td>
+                                <td>
+                                    <a href="{% url 'aprovar_solicitacao' solicitacao.id %}" class="btn btn-sm btn-success me-1">Aprovar e Retirar</a>
+                                    <a href="{% url 'reprovar_solicitacao' solicitacao.id %}" class="btn btn-sm btn-danger">Reprovar</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Nenhuma solicitação pendente.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Entrada de Produto -->
+    <div class="tab-pane fade" id="entrada" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Entrada de Produto</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'entrada_produto' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="codigo_entrada" class="form-label">Código do Produto</label>
+                            <select class="form-select" id="codigo_entrada" name="codigo" required>
+                                <option value="">Selecione um produto</option>
+                                {% for produto in produtos %}
+                                <option value="{{ produto.codigo }}">{{ produto.codigo }} - {{ produto.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="quantidade_entrada" class="form-label">Quantidade</label>
+                            <input type="number" class="form-control" id="quantidade_entrada" name="quantidade" min="1" required>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success">Adicionar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Retirada de Produto -->
+    <div class="tab-pane fade" id="retirada" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Retirada Direta de Produto</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'retirada_direta' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="codigo_retirada" class="form-label">Código do Produto</label>
+                            <select class="form-select" id="codigo_retirada" name="codigo" required>
+                                <option value="">Selecione um produto</option>
+                                {% for produto in produtos %}
+                                <option value="{{ produto.codigo }}">{{ produto.codigo }} - {{ produto.nome }} (Estoque: {{ produto.quantidade }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="quantidade_retirada" class="form-label">Quantidade</label>
+                            <input type="number" class="form-control" id="quantidade_retirada" name="quantidade" min="1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="destino_retirada" class="form-label">Destino</label>
+                            <input type="text" class="form-control" id="destino_retirada" name="destino" placeholder="Para onde será usado o produto" required>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-danger">Retirar</button>
+                        </div>
+                    </div>
+                </form>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <strong>Nota:</strong> Esta é uma retirada direta que não requer aprovação. O produto será retirado imediatamente do estoque.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Entradas -->
+    <div class="tab-pane fade" id="entradas" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Histórico de Entradas</h5>
+            </div>
+            <div class="card-body">
+                {% if entradas_recentes %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Código</th>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Usuário</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entrada in entradas_recentes %}
+                            <tr>
+                                <td>{{ entrada.data_entrada|date:"d/m/Y H:i" }}</td>
+                                <td>{{ entrada.produto.codigo }}</td>
+                                <td>{{ entrada.produto.nome }}</td>
+                                <td><span class="badge bg-success">+{{ entrada.quantidade }}</span></td>
+                                <td>{{ entrada.usuario.nome }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Nenhuma entrada registrada.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Saídas -->
+    <div class="tab-pane fade" id="saidas" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Histórico de Saídas</h5>
+            </div>
+            <div class="card-body">
+                {% if saidas_recentes %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Código</th>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Destino</th>
+                                <th>Usuário</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for saida in saidas_recentes %}
+                            <tr>
+                                <td>{{ saida.data_saida|date:"d/m/Y H:i" }}</td>
+                                <td>{{ saida.produto.codigo }}</td>
+                                <td>{{ saida.produto.nome }}</td>
+                                <td><span class="badge bg-danger">-{{ saida.quantidade }}</span></td>
+                                <td>{{ saida.destino }}</td>
+                                <td>{{ saida.usuario.nome }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Nenhuma saída registrada.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aba Movimentações -->
+    <div class="tab-pane fade" id="movimentacoes" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5>Movimentações (Auditoria)</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <a href="{% url 'listar_movimentacoes' %}" class="btn btn-info">Ver Todas as Movimentações</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+{% endblock %}
