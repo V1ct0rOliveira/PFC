@@ -11,7 +11,10 @@ from decouple import config
 import re
 from .models import CustomUser, Product, Solicitacao, Movimentacao, Saidas, Entradas
 
-# Função de validação de senha forte
+# ============================================================================
+# FUNÇÕES AUXILIARES
+# ============================================================================
+
 def validar_senha_forte(senha):
     """Valida se a senha atende aos critérios de segurança"""
     if len(senha) < 8:
@@ -31,19 +34,23 @@ def validar_senha_forte(senha):
     
     return True, "Senha válida"
 
-# Função para views
+# ============================================================================
+# VIEWS GERAIS
+# ============================================================================
+
 def home(request):
     """View da página inicial do sistema"""
-    # Força logout para garantir que os botões aparecem
     if request.user.is_authenticated:
         auth_logout(request)
     return render(request, 'home.html')
 
-# Função para criação de usuarios 
+# ============================================================================
+# VIEWS DE AUTENTICAÇÃO E USUÁRIO
+# ============================================================================
+
 def cadastro(request):
     """View para cadastro de novos usuários"""
     if request.method == 'POST':
-        # Captura os dados do formulário
         username = request.POST['username']
         email = request.POST['email']
         password = request.POST['password']
@@ -51,18 +58,15 @@ def cadastro(request):
         sobrenome = request.POST['sobrenome']
         telefone = request.POST['telefone']
         
-        # Verifica se o usuário já existe
         if CustomUser.objects.filter(username=username).exists():
             messages.error(request, 'Usuário já existe')
             return render(request, 'cadastro.html')
         
-        # Valida senha forte
         senha_valida, mensagem = validar_senha_forte(password)
         if not senha_valida:
             messages.error(request, mensagem)
             return render(request, 'cadastro.html')
         
-        # Cria novo usuário com nível de acesso padrão 'comum'
         user = CustomUser.objects.create_user(
             username=username,
             email=email,
@@ -73,11 +77,9 @@ def cadastro(request):
             nivel_acesso='comum'
         )
         
-        # Mensagem de sucesso e redirecionamento para login
         messages.success(request, 'Cadastro realizado com sucesso!')
         return redirect('login')
     
-    # Se não for POST, renderiza o formulário de cadastro
     return render(request, 'cadastro.html')
 
 def login(request):
@@ -86,17 +88,12 @@ def login(request):
         username = request.POST['username']
         password = request.POST['password']
         
-        # Verifica se o usuario tem a autenticação 2FA habilitada ou não
-        # Se tem, ele irá redirecionar para a página de verificação do TOTP
-        # Se não tem, ele irá redirecionar para a página de configuração do TOTP
         user = authenticate(request, username=username, password=password)
         if user:
             if not user.totp_enabled:
-                # Primeira vez - configurar TOTP
                 request.session['setup_user_id'] = user.id
                 return redirect('setup_totp')
             else:
-                # Verificar TOTP
                 request.session['login_user_id'] = user.id
                 return redirect('verify_totp')
         else:
@@ -104,6 +101,244 @@ def login(request):
     
     return render(request, 'login.html')
 
+def logout(request):
+    """View para logout do usuário"""
+    auth_logout(request)
+    return redirect('home')
+
+@login_required
+def perfil(request):
+    if request.method == 'POST':
+        user = request.user
+        user.nome = request.POST.get('nome', user.nome)
+        user.sobrenome = request.POST.get('sobrenome', user.sobrenome)
+        user.email = request.POST.get('email', user.email)
+        user.telefone = request.POST.get('telefone', user.telefone)
+        
+        nova_senha = request.POST.get('nova_senha')
+        if nova_senha:
+            senha_valida, mensagem = validar_senha_forte(nova_senha)
+            if not senha_valida:
+                messages.error(request, mensagem)
+                return render(request, 'perfil.html')
+            user.set_password(nova_senha)
+        
+        user.save()
+        messages.success(request, 'Configurações atualizadas com sucesso!')
+        return redirect('perfil')
+    
+    return render(request, 'perfil.html')
+
+def tabela_usuarios(request):
+    """View para exibir tabela de usuários - BLOQUEADA para usuário comum"""
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    if request.user.nivel_acesso == 'comum':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_comum')
+    
+    usuarios = CustomUser.objects.all().order_by('username')
+    return render(request, 'tabela_usuarios.html', {'usuarios': usuarios})
+
+# ============================================================================
+# VIEWS DE RECUPERAÇÃO DE SENHA
+# ============================================================================
+
+def esqueci_senha(request):
+    """View para solicitar reset de senha"""
+    if request.method == 'POST':
+        email = request.POST['email']
+        
+        try:
+            user = CustomUser.objects.get(email=email)
+            
+            import random
+            token = str(random.randint(100000, 999999))
+            
+            request.session['reset_token'] = token
+            request.session['reset_user_id'] = user.id
+            request.session['token_expires'] = (timezone.now() + timezone.timedelta(minutes=15)).timestamp()
+            
+            from django.core.mail import send_mail
+            
+            send_mail(
+                'Token de Reset - Sistema de Estoque',
+                f'Seu token para redefinir a senha é: {token}\n\nEste token expira em 15 minutos.',
+                config('DEFAULT_FROM_EMAIL', default='noreply@sistema.com'),
+                [email],
+                fail_silently=False,
+            )
+            
+            messages.success(request, 'Token enviado para seu email!')
+            return redirect('verificar_token')
+            
+        except CustomUser.DoesNotExist:
+            messages.error(request, 'Email não encontrado')
+    
+    return render(request, 'esqueci_senha.html')
+
+def verificar_token(request):
+    """View para verificar token enviado por email"""
+    if 'reset_token' not in request.session:
+        messages.error(request, 'Sessão expirada. Solicite um novo token.')
+        return redirect('esqueci_senha')
+    
+    if timezone.now().timestamp() > request.session.get('token_expires', 0):
+        del request.session['reset_token']
+        del request.session['reset_user_id']
+        del request.session['token_expires']
+        messages.error(request, 'Token expirado. Solicite um novo token.')
+        return redirect('esqueci_senha')
+    
+    if request.method == 'POST':
+        token_digitado = request.POST['token']
+        
+        if token_digitado == request.session['reset_token']:
+            return redirect('nova_senha')
+        else:
+            messages.error(request, 'Token inválido')
+    
+    return render(request, 'verificar_token.html')
+
+def nova_senha(request):
+    """View para definir nova senha após verificar token"""
+    if 'reset_token' not in request.session or 'reset_user_id' not in request.session:
+        messages.error(request, 'Sessão inválida. Inicie o processo novamente.')
+        return redirect('esqueci_senha')
+    
+    if request.method == 'POST':
+        nova_senha = request.POST['nova_senha']
+        confirmar_senha = request.POST['confirmar_senha']
+        
+        if nova_senha != confirmar_senha:
+            messages.error(request, 'Senhas não coincidem')
+            return render(request, 'nova_senha.html')
+        
+        senha_valida, mensagem = validar_senha_forte(nova_senha)
+        if not senha_valida:
+            messages.error(request, mensagem)
+            return render(request, 'nova_senha.html')
+        
+        user = CustomUser.objects.get(id=request.session['reset_user_id'])
+        user.set_password(nova_senha)
+        user.save()
+        
+        del request.session['reset_token']
+        del request.session['reset_user_id']
+        del request.session['token_expires']
+        
+        messages.success(request, 'Senha alterada com sucesso!')
+        return redirect('login')
+    
+    return render(request, 'nova_senha.html')
+
+# ============================================================================
+# VIEWS DE AUTENTICAÇÃO 2FA
+# ============================================================================
+
+def setup_totp(request):
+    """Configuração inicial do TOTP"""
+    if 'setup_user_id' not in request.session:
+        return redirect('login')
+    
+    user = CustomUser.objects.get(id=request.session['setup_user_id'])
+    
+    if request.method == 'POST':
+        import pyotp
+        token = request.POST['token']
+        
+        totp = pyotp.TOTP(user.totp_secret)
+        if totp.verify(token):
+            user.totp_enabled = True
+            user.save()
+            auth_login(request, user)
+            del request.session['setup_user_id']
+            messages.success(request, 'Autenticação 2FA configurada com sucesso!')
+            if user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            elif user.nivel_acesso == 'superadmin':
+                return redirect('dashboard_super')
+        else:
+            messages.error(request, 'Código inválido')
+    
+    if not user.totp_secret:
+        import pyotp
+        user.totp_secret = pyotp.random_base32()
+        user.save()
+    
+    import pyotp
+    import qrcode
+    from io import BytesIO
+    import base64
+    
+    totp = pyotp.TOTP(user.totp_secret)
+    provisioning_uri = totp.provisioning_uri(
+        name=user.username,
+        issuer_name="Stock Flow"
+    )
+    
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(provisioning_uri)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    qr_code = base64.b64encode(buffer.getvalue()).decode()
+    
+    return render(request, 'setup_totp.html', {
+        'qr_code': qr_code,
+        'secret': user.totp_secret
+    })
+
+def verify_totp(request):
+    """Verificação do TOTP no login"""
+    if 'login_user_id' not in request.session:
+        return redirect('login')
+    
+    user = CustomUser.objects.get(id=request.session['login_user_id'])
+    
+    if request.method == 'POST':
+        import pyotp
+        token = request.POST['token']
+        
+        totp = pyotp.TOTP(user.totp_secret)
+        if totp.verify(token):
+            auth_login(request, user)
+            del request.session['login_user_id']
+            
+            if user.nivel_acesso == 'comum':
+                return redirect('dashboard_comum')
+            elif user.nivel_acesso == 'admin':
+                return redirect('dashboard_admin')
+            elif user.nivel_acesso == 'superadmin':
+                return redirect('dashboard_super')
+        else:
+            messages.error(request, 'Código inválido')
+    
+    return render(request, 'verify_totp.html')
+
+@login_required
+def reset_user_totp(request, user_id):
+    """Reset TOTP de outro usuário (apenas superadmin)"""
+    if request.user.nivel_acesso != 'superadmin':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_super')
+    
+    user = get_object_or_404(CustomUser, id=user_id)
+    user.totp_secret = None
+    user.totp_enabled = False
+    user.save()
+    
+    messages.success(request, f'Autenticação 2FA resetada para {user.username}')
+    return redirect('dashboard_super')
+
+# ============================================================================
+# VIEWS DE DASHBOARD
+# ============================================================================
 
 @login_required
 def dashboard(request):
@@ -169,11 +404,55 @@ def dashboard_super(request):
     }
     return render(request, 'dashboard_super.html', context)
 
-# Função de logout do usuario
-def logout(request):
-    """View para logout do usuário"""
-    auth_logout(request)  # Encerra a sessão do usuário
-    return redirect('home')  # Redireciona para página inicial
+# ============================================================================
+# VIEWS DE ESTOQUE - PRODUTOS
+# ============================================================================
+
+@login_required
+def cadastro_produto(request):
+    """View para cadastro de novos produtos no estoque - BLOQUEADA para usuário comum"""
+    if request.user.nivel_acesso == 'comum':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_comum')
+    
+    if request.method == 'POST':
+        nome = request.POST['nome']
+        quantidade = int(request.POST['quantidade'])
+        local = request.POST['local']
+        codigo = request.POST['codigo']
+        carencia = request.POST.get('carencia') == 'on'
+        
+        if Product.objects.filter(codigo=codigo).exists():
+            messages.error(request, 'Código do produto já existe')
+            return render(request, 'cadastro_produto.html')
+        
+        Product.objects.create(
+            nome=nome,
+            quantidade=quantidade,
+            local=local,
+            codigo=codigo,
+            carencia=carencia
+        )
+        
+        messages.success(request, 'Produto cadastrado com sucesso!')
+        if request.user.nivel_acesso == 'comum':
+            return redirect('dashboard_comum')
+        elif request.user.nivel_acesso == 'admin':
+            return redirect('dashboard_admin')
+        else:
+            return redirect('dashboard_super')
+    
+    return render(request, 'cadastro_produto.html')
+
+@login_required
+def estoque_geral(request):
+    """View para exibir o estoque geral de produtos"""
+    produtos = Product.objects.all()
+    return render(request, 'estoque_geral.html', {'produtos': produtos})
+
+# ============================================================================
+# VIEWS DE ESTOQUE - MOVIMENTAÇÕES
+# ============================================================================
 
 @login_required
 def listar_movimentacoes(request):
@@ -184,7 +463,6 @@ def listar_movimentacoes(request):
     
     movimentacoes = Movimentacao.objects.select_related('produto', 'usuario').order_by('-data_hora')
     
-    # Filtros
     codigo = request.GET.get('codigo')
     nome = request.GET.get('nome')
     tipo = request.GET.get('tipo')
@@ -209,7 +487,7 @@ def listar_movimentacoes(request):
     tipos = Movimentacao.TIPO_CHOICES
     
     context = {
-        'movimentacoes': movimentacoes[:100],  # Limitar a 100 registros
+        'movimentacoes': movimentacoes[:100],
         'usuarios': usuarios,
         'tipos': tipos,
         'filtros': {
@@ -224,248 +502,11 @@ def listar_movimentacoes(request):
     
     return render(request, 'movimentacoes.html', context)
 
-@login_required
-def perfil(request):
-    if request.method == 'POST':
-        user = request.user
-        user.nome = request.POST.get('nome', user.nome)
-        user.sobrenome = request.POST.get('sobrenome', user.sobrenome)
-        user.email = request.POST.get('email', user.email)
-        user.telefone = request.POST.get('telefone', user.telefone)
-        
-        nova_senha = request.POST.get('nova_senha')
-        if nova_senha:
-            senha_valida, mensagem = validar_senha_forte(nova_senha)
-            if not senha_valida:
-                messages.error(request, mensagem)
-                return render(request, 'perfil.html')
-            user.set_password(nova_senha)
-        
-        user.save()
-        messages.success(request, 'Configurações atualizadas com sucesso!')
-        return redirect('perfil')
-    
-    return render(request, 'perfil.html')
+# ============================================================================
+# VIEWS DE ESTOQUE - SOLICITAÇÕES
+# ============================================================================
 
 @login_required
-def cadastro_produto(request):
-    """View para cadastro de novos produtos no estoque - BLOQUEADA para usuário comum"""
-    if request.user.nivel_acesso == 'comum':
-        messages.error(request, 'Acesso negado')
-        return redirect('dashboard_comum')
-    
-    if request.method == 'POST':
-        # Captura dados do formulário de produto
-        nome = request.POST['nome']
-        quantidade = int(request.POST['quantidade'])  # Converte para inteiro
-        local = request.POST['local']
-        codigo = request.POST['codigo']
-        carencia = request.POST.get('carencia') == 'on'  # Converte checkbox para boolean
-        
-        # Verifica se já existe produto com o mesmo código (código deve ser único)
-        if Product.objects.filter(codigo=codigo).exists():
-            messages.error(request, 'Código do produto já existe')
-            return render(request, 'cadastro_produto.html')
-        
-        # Cria novo produto no banco de dados
-        Product.objects.create(
-            nome=nome,
-            quantidade=quantidade,
-            local=local,
-            codigo=codigo,
-            carencia=carencia
-        )
-        
-        # Mensagem de sucesso e redirecionamento para dashboard
-        messages.success(request, 'Produto cadastrado com sucesso!')
-        if request.user.nivel_acesso == 'comum':
-            return redirect('dashboard_comum')
-        elif request.user.nivel_acesso == 'admin':
-            return redirect('dashboard_admin')
-        else:
-            return redirect('dashboard_super')
-    
-    # Se não for POST, renderiza formulário de cadastro de produto
-    return render(request, 'cadastro_produto.html')
-
-@login_required  # Verifica se o usuário está logado
-# Função para exibir o estoque geral de produtos
-def estoque_geral(request):
-    """View para exibir o estoque geral de produtos"""
-    # Recupera todos os produtos do banco de dados
-    produtos = Product.objects.all()
-
-    # Renderiza template com os produtos
-    return render(request, 'estoque_geral.html', {'produtos': produtos})
-
-@login_required
-def gerar_relatorio_pdf(request):
-    """View para gerar relatório PDF do estoque - BLOQUEADA para usuário comum"""
-    if request.user.nivel_acesso == 'comum':
-        messages.error(request, 'Acesso negado')
-        return redirect('dashboard_comum')
-    
-    from django.http import HttpResponse
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
-    from reportlab.lib.styles import getSampleStyleSheet
-    from datetime import datetime
-    
-    # Busca todos os produtos
-    produtos = Product.objects.all().order_by('nome')
-    
-    # Cria resposta HTTP para PDF
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="relatorio_estoque_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
-    
-    # Cria documento PDF
-    doc = SimpleDocTemplate(response, pagesize=A4)
-    elements = []
-    styles = getSampleStyleSheet()
-    
-    # Título
-    title = Paragraph("Relatório de Estoque Geral", styles['Title'])
-    elements.append(title)
-    
-    # Data
-    date = Paragraph(f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal'])
-    elements.append(date)
-    elements.append(Paragraph("<br/>", styles['Normal']))
-    
-    # Dados da tabela
-    data = [['Código', 'Nome', 'Quantidade', 'Local']]
-    
-    for produto in produtos:
-        data.append([
-            produto.codigo,
-            produto.nome,
-            str(produto.quantidade),
-            produto.local,
-        ])
-    
-    # Cria tabela
-    table = Table(data)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 14),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    elements.append(table)
-    
-    # Gera PDF
-    doc.build(elements)
-    return response
-
-# Função para solicitar reset de senha
-def esqueci_senha(request):
-    """View para solicitar reset de senha"""
-    if request.method == 'POST':
-        email = request.POST['email']
-        
-        try:
-            user = CustomUser.objects.get(email=email)
-            
-            # Gera token JWT simples (6 dígitos)
-            import random
-            token = str(random.randint(100000, 999999))
-            
-            # Salva token na sessão
-            request.session['reset_token'] = token
-            request.session['reset_user_id'] = user.id
-            request.session['token_expires'] = (timezone.now() + timezone.timedelta(minutes=15)).timestamp()
-            
-            # Envia email com token
-            from django.core.mail import send_mail
-            
-            # Envia token por email
-            send_mail(
-                'Token de Reset - Sistema de Estoque',
-                f'Seu token para redefinir a senha é: {token}\n\nEste token expira em 15 minutos.',
-                config('DEFAULT_FROM_EMAIL', default='noreply@sistema.com'),
-                [email],
-                fail_silently=False,
-            )
-            
-            messages.success(request, 'Token enviado para seu email!')
-            return redirect('verificar_token')
-            
-        except CustomUser.DoesNotExist:
-            messages.error(request, 'Email não encontrado')
-    
-    return render(request, 'esqueci_senha.html')
-
-# Função para verificar o token enviado por email
-def verificar_token(request):
-    """View para verificar token enviado por email"""
-    if 'reset_token' not in request.session:
-        messages.error(request, 'Sessão expirada. Solicite um novo token.')
-        return redirect('esqueci_senha')
-    
-    # Verifica se token expirou
-    if timezone.now().timestamp() > request.session.get('token_expires', 0):
-        del request.session['reset_token']
-        del request.session['reset_user_id']
-        del request.session['token_expires']
-        messages.error(request, 'Token expirado. Solicite um novo token.')
-        return redirect('esqueci_senha')
-    
-    if request.method == 'POST':
-        token_digitado = request.POST['token']
-        
-        if token_digitado == request.session['reset_token']:
-            # Token correto, redireciona para nova senha
-            return redirect('nova_senha')
-        else:
-            messages.error(request, 'Token inválido')
-    
-    return render(request, 'verificar_token.html')
-
-# Função para definir uma nova senha após verificar o token
-def nova_senha(request):
-    """View para definir nova senha após verificar token"""
-    if 'reset_token' not in request.session or 'reset_user_id' not in request.session:
-        messages.error(request, 'Sessão inválida. Inicie o processo novamente.')
-        return redirect('esqueci_senha')
-    
-    if request.method == 'POST':
-        nova_senha = request.POST['nova_senha']
-        confirmar_senha = request.POST['confirmar_senha']
-        
-        if nova_senha != confirmar_senha:
-            messages.error(request, 'Senhas não coincidem')
-            return render(request, 'nova_senha.html')
-        
-        # Valida senha forte
-        senha_valida, mensagem = validar_senha_forte(nova_senha)
-        if not senha_valida:
-            messages.error(request, mensagem)
-            return render(request, 'nova_senha.html')
-        
-        # Atualiza senha do usuário
-        user = CustomUser.objects.get(id=request.session['reset_user_id'])
-        user.set_password(nova_senha)
-        user.save()
-        
-        # Limpa sessão
-        del request.session['reset_token']
-        del request.session['reset_user_id']
-        del request.session['token_expires']
-        
-        messages.success(request, 'Senha alterada com sucesso!')
-        return redirect('login')
-    
-    return render(request, 'nova_senha.html')
-
-@login_required # Verifica se o usuário está logado
-# Função para solicitar produtos
 def solicitar_produto(request):
     """View para solicitar produtos"""
     if request.method == 'POST':
@@ -502,7 +543,6 @@ def solicitar_produto(request):
             else:
                 return redirect('dashboard_super')
         
-        # Criar solicitação
         solicitacao = Solicitacao.objects.create(
             produto=produto,
             quantidade=quantidade,
@@ -510,7 +550,6 @@ def solicitar_produto(request):
             solicitante=request.user
         )
         
-        # Registrar movimentação
         Movimentacao.objects.create(
             tipo='SOLICITACAO',
             produto=produto,
@@ -535,14 +574,12 @@ def solicitar_produto(request):
     else:
         return redirect('dashboard_super')
 
-@login_required # Verifica se o usuário está logado
-# Função para aprovar solicitação e executar retirada automaticamente
+@login_required
 def aprovar_solicitacao(request, solicitacao_id):
     """View para aprovar solicitação e executar retirada automaticamente"""
     solicitacao = get_object_or_404(Solicitacao, id=solicitacao_id, status='PENDENTE')
     produto = solicitacao.produto
     
-    # Verificar se há estoque suficiente
     if produto.quantidade < solicitacao.quantidade:
         messages.error(request, f'Estoque insuficiente para aprovação. Disponível: {produto.quantidade}, Solicitado: {solicitacao.quantidade}')
         if request.user.nivel_acesso == 'comum':
@@ -553,17 +590,14 @@ def aprovar_solicitacao(request, solicitacao_id):
             return redirect('dashboard_super')
     
     with transaction.atomic():
-        # Aprovar solicitação
-        solicitacao.status = 'ATENDIDA'  # Já marca como atendida
+        solicitacao.status = 'ATENDIDA'
         solicitacao.aprovador = request.user
         solicitacao.data_aprovacao = timezone.now()
         solicitacao.save()
         
-        # Executar retirada automaticamente
         produto.quantidade -= solicitacao.quantidade
         produto.save()
         
-        # Criar registro de saída
         Saidas.objects.create(
             produto=produto,
             quantidade=solicitacao.quantidade,
@@ -571,7 +605,6 @@ def aprovar_solicitacao(request, solicitacao_id):
             usuario=request.user
         )
         
-        # Registrar movimentação
         Movimentacao.objects.create(
             tipo='RETIRADA',
             produto=produto,
@@ -589,8 +622,7 @@ def aprovar_solicitacao(request, solicitacao_id):
     else:
         return redirect('dashboard_super')
 
-@login_required # Verifica se o usuário está logado
-# Função para reprovar solicitação
+@login_required
 def reprovar_solicitacao(request, solicitacao_id):
     """View para reprovar solicitação"""
     solicitacao = get_object_or_404(Solicitacao, id=solicitacao_id, status='PENDENTE')
@@ -608,8 +640,11 @@ def reprovar_solicitacao(request, solicitacao_id):
     else:
         return redirect('dashboard_super')
 
-@login_required # Verifica se o usuário está logado
-# Função para entrada de produtos
+# ============================================================================
+# VIEWS DE ESTOQUE - ENTRADAS E SAÍDAS
+# ============================================================================
+
+@login_required
 def entrada_produto(request):
     """View para entrada de produtos"""
     if request.method == 'POST':
@@ -637,11 +672,9 @@ def entrada_produto(request):
                 return redirect('dashboard_super')
         
         with transaction.atomic():
-            # Atualizar estoque
             produto.quantidade += quantidade
             produto.save()
             
-            # Registrar na tabela movimentação
             Movimentacao.objects.create(
                 tipo='ENTRADA',
                 produto=produto,
@@ -650,7 +683,6 @@ def entrada_produto(request):
                 observacao=f'Entrada de {quantidade} unidades'
             )
 
-            # Criar registro de entrada
             Entradas.objects.create(
                 produto=produto,
                 quantidade=quantidade,
@@ -672,8 +704,7 @@ def entrada_produto(request):
     else:
         return redirect('dashboard_super')
 
-@login_required # Verifica se o usuário está logado
-# Função para retirada direta de produtos (sem solicitação)
+@login_required
 def retirada_direta(request):
     """View para retirada direta de produtos (sem solicitação)"""
     if request.method == 'POST':
@@ -710,7 +741,6 @@ def retirada_direta(request):
             else:
                 return redirect('dashboard_super')
         
-        # Verificar estoque suficiente
         if produto.quantidade < quantidade:
             messages.error(request, f'Estoque insuficiente. Disponível: {produto.quantidade}, Solicitado: {quantidade}')
             if request.user.nivel_acesso == 'comum':
@@ -721,11 +751,9 @@ def retirada_direta(request):
                 return redirect('dashboard_super')
         
         with transaction.atomic():
-            # Atualizar estoque
             produto.quantidade -= quantidade
             produto.save()
             
-            # Criar registro de saída
             Saidas.objects.create(
                 produto=produto,
                 quantidade=quantidade,
@@ -733,7 +761,6 @@ def retirada_direta(request):
                 usuario=request.user
             )
             
-            # Registrar movimentação
             Movimentacao.objects.create(
                 tipo='RETIRADA',
                 produto=produto,
@@ -757,117 +784,64 @@ def retirada_direta(request):
     else:
         return redirect('dashboard_super')
 
-def setup_totp(request):
-    """Configuração inicial do TOTP"""
-    if 'setup_user_id' not in request.session:
-        return redirect('login')
-    
-    user = CustomUser.objects.get(id=request.session['setup_user_id'])
-    
-    if request.method == 'POST':
-        import pyotp
-        token = request.POST['token']
-        
-        totp = pyotp.TOTP(user.totp_secret)
-        if totp.verify(token):
-            user.totp_enabled = True
-            user.save()
-            auth_login(request, user)
-            del request.session['setup_user_id']
-            messages.success(request, 'Autenticação 2FA configurada com sucesso!')
-            if user.nivel_acesso == 'comum':
-                return redirect('dashboard_comum')
-            elif user.nivel_acesso == 'admin':
-                return redirect('dashboard_admin')
-            elif user.nivel_acesso == 'superadmin':
-                return redirect('dashboard_super')
-        else:
-            messages.error(request, 'Código inválido')
-    
-    # Gera secret se não existir
-    if not user.totp_secret:
-        import pyotp
-        user.totp_secret = pyotp.random_base32()
-        user.save()
-    
-    # Gera QR Code
-    import pyotp
-    import qrcode
-    from io import BytesIO
-    import base64
-    
-    totp = pyotp.TOTP(user.totp_secret)
-    provisioning_uri = totp.provisioning_uri(
-        name=user.username,
-        issuer_name="Stock Flow"
-    )
-    
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(provisioning_uri)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffer = BytesIO()
-    img.save(buffer, format='PNG')
-    qr_code = base64.b64encode(buffer.getvalue()).decode()
-    
-    return render(request, 'setup_totp.html', {
-        'qr_code': qr_code,
-        'secret': user.totp_secret
-    })
-
-def verify_totp(request):
-    """Verificação do TOTP no login"""
-    if 'login_user_id' not in request.session:
-        return redirect('login')
-    
-    user = CustomUser.objects.get(id=request.session['login_user_id'])
-    
-    if request.method == 'POST':
-        import pyotp
-        token = request.POST['token']
-        
-        totp = pyotp.TOTP(user.totp_secret)
-        if totp.verify(token):
-            auth_login(request, user)
-            del request.session['login_user_id']
-            
-            # Redirecionamento para a dashboard com base no nivel de acesso
-            if user.nivel_acesso == 'comum':
-                return redirect('dashboard_comum')
-            elif user.nivel_acesso == 'admin':
-                return redirect('dashboard_admin')
-            elif user.nivel_acesso == 'superadmin':
-                return redirect('dashboard_super')
-        else:
-            messages.error(request, 'Código inválido')
-    
-    return render(request, 'verify_totp.html')
+# ============================================================================
+# VIEWS DE RELATÓRIOS
+# ============================================================================
 
 @login_required
-def reset_user_totp(request, user_id):
-    """Reset TOTP de outro usuário (apenas superadmin)"""
-    if request.user.nivel_acesso != 'superadmin':
-        messages.error(request, 'Acesso negado')
-        return redirect('dashboard_super')
-    
-    user = get_object_or_404(CustomUser, id=user_id)
-    user.totp_secret = None
-    user.totp_enabled = False
-    user.save()
-    
-    messages.success(request, f'Autenticação 2FA resetada para {user.username}')
-    return redirect('dashboard_super')
-
-def tabela_usuarios(request):
-    """View para exibir tabela de usuários - BLOQUEADA para usuário comum"""
-    if not request.user.is_authenticated:
-        return redirect('login')
-    
+def gerar_relatorio_pdf(request):
+    """View para gerar relatório PDF do estoque - BLOQUEADA para usuário comum"""
     if request.user.nivel_acesso == 'comum':
         messages.error(request, 'Acesso negado')
         return redirect('dashboard_comum')
     
-    usuarios = CustomUser.objects.all().order_by('username')
+    from django.http import HttpResponse
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+    from reportlab.lib.styles import getSampleStyleSheet
+    from datetime import datetime
     
-    return render(request, 'tabela_usuarios.html', {'usuarios': usuarios})
+    produtos = Product.objects.all().order_by('nome')
+    
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="relatorio_estoque_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
+    
+    doc = SimpleDocTemplate(response, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    title = Paragraph("Relatório de Estoque Geral", styles['Title'])
+    elements.append(title)
+    
+    date = Paragraph(f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal'])
+    elements.append(date)
+    elements.append(Paragraph("<br/>", styles['Normal']))
+    
+    data = [['Código', 'Nome', 'Quantidade', 'Local']]
+    
+    for produto in produtos:
+        data.append([
+            produto.codigo,
+            produto.nome,
+            str(produto.quantidade),
+            produto.local,
+        ])
+    
+    table = Table(data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    elements.append(table)
+    
+    doc.build(elements)
+    return response
