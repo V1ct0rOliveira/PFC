@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
 from decouple import config
+from django.core.mail import send_mail
 import re
 from .models import CustomUser, Product, Solicitacao, Movimentacao, Saidas, Entradas
 
@@ -159,8 +160,6 @@ def esqueci_senha(request):
             request.session['reset_token'] = token
             request.session['reset_user_id'] = user.id
             request.session['token_expires'] = (timezone.now() + timezone.timedelta(minutes=15)).timestamp()
-            
-            from django.core.mail import send_mail
             
             send_mail(
                 'Token de Reset - Sistema de Estoque',
@@ -648,6 +647,7 @@ def reprovar_solicitacao(request, solicitacao_id):
 def entrada_produto(request):
     """View para entrada de produtos"""
     if request.method == 'POST':
+        email = "beltramevictor13@gmail.com"
         codigo = request.POST.get('codigo')
         quantidade = int(request.POST.get('quantidade', 0))
         
@@ -688,6 +688,14 @@ def entrada_produto(request):
                 quantidade=quantidade,
                 usuario=request.user,
             )
+
+            send_mail(
+                'Entrada de Produto',
+                f'O usuário {request.user.username} realizou a entrada de {quantidade} unidades do produto {produto.nome}.',
+                'XXXXXXXXXXXXXXXXXXXXXXXXX',
+                [email],
+                fail_silently=False,
+            )
         
         messages.success(request, f'Entrada de {quantidade} unidades de {produto.nome} registrada!')
         if request.user.nivel_acesso == 'comum':
@@ -708,6 +716,7 @@ def entrada_produto(request):
 def retirada_direta(request):
     """View para retirada direta de produtos (sem solicitação)"""
     if request.method == 'POST':
+        email = "beltramevictor13@gmail.com"
         codigo = request.POST.get('codigo')
         quantidade = int(request.POST.get('quantidade', 0))
         destino = request.POST.get('destino', '').strip()
@@ -767,6 +776,14 @@ def retirada_direta(request):
                 quantidade=quantidade,
                 usuario=request.user,
                 observacao=f'Retirada direta de {quantidade} unidades - Destino: {destino}'
+            )
+
+            send_mail(
+                'Retirada de Produto',
+                f'O usuário {request.user.username} realizou a retirada de {quantidade} unidades do produto {produto.nome}.',
+                'XXXXXXXXXXXXXXXXXXXXXXXXX',
+                [email],
+                fail_silently=False,
             )
         
         messages.success(request, f'Retirada de {quantidade} unidades de {produto.nome} realizada com sucesso!')

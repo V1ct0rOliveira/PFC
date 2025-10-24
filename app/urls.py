@@ -1,6 +1,7 @@
 # Importações necessárias do Django
 from django.urls import path
 from . import views
+from . import api_view
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -23,6 +24,12 @@ urlpatterns = [
     path('dashboard_comum/', views.dashboard_comum, name='dashboard_comum'),
     path('dashboard_admin/', views.dashboard_admin, name='dashboard_admin'),
     path('dashboard_super/', views.dashboard_super, name='dashboard_super'),
+
+    #URLs de API
+    path('api/listar_produtos/', api_view.listar_produtos_api, name='listar_produtos_api'),
+    path('api/listar_produtos/<int:product_id>/', api_view.detalhes_produtos_api, name='detalhes_produtos_api'),
+    path('api/listar_movimentacoes/', api_view.listar_movimentacoes_api, name='listar_movimentacoes_api'),
+    path('api/listar_movimentacoes/<int:movimentacao_id>/', api_view.detalhes_movimentacoes_api, name='detalhes_movimentacoes_api'),
 
     # URLs de geração de relatórios
     path('gerar_relatorio_pdf/', views.gerar_relatorio_pdf, name='gerar_relatorio_pdf'),
