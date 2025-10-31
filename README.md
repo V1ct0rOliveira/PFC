@@ -69,9 +69,9 @@ python manage.py runserver
 ## 🔧 Tecnologias
 
 - **Backend**: Django 4.2 + Django REST Framework
-- **Frontend**: Flask + Jinja2 + Bootstrap 5
-- **Banco**: SQLite (desenvolvimento) / PostgreSQL (produção)
-- **Autenticação**: JWT
+- **Frontend**: Bootstrap 5
+- **Banco**: SQLite (desenvolvimento) / PostgreSQL supabase (produção)
+- **Autenticação**: JWT e Authenticator
 - **Relatórios**: python-docx, openpyxl, reportlab
 
 ## 📝 URLs Disponíveis
