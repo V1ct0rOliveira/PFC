@@ -109,7 +109,7 @@
                             {% endif %}
                         </td>
                         <td>{{ mov.data_hora|date:"d/m/Y H:i:s" }}</td>
-                        <td>{{ mov.usuario.nome }}</td>
+                        <td>{{ mov.usuario }}</td>
                         <td>
                             {% if mov.referencia_id %}
                                 #{{ mov.referencia_id }}

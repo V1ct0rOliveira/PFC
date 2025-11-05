@@ -5,7 +5,7 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2>Bem-vindo, {{ user.nome }}!</h2>
+        <h2>Bem-vindo, {{ user.username }}!</h2>
         <p class="text-muted">Nível de acesso: {{ user.nivel_acesso|title }}</p>
     </div>
 </div>
@@ -136,7 +136,7 @@
                                 <td>{{ solicitacao.produto.nome }}</td>
                                 <td>{{ solicitacao.quantidade }}</td>
                                 <td>{{ solicitacao.destino }}</td>
-                                <td>{{ solicitacao.solicitante.nome }}</td>
+                                <td>{{ solicitacao.solicitante }}</td>
                                 <td>{{ solicitacao.data_solicitacao|date:"d/m/Y H:i" }}</td>
                                 <td><span class="badge bg-warning">{{ solicitacao.status }}</span></td>
                                 <td>
@@ -254,7 +254,7 @@
                                 <td>{{ entrada.produto.codigo }}</td>
                                 <td>{{ entrada.produto.nome }}</td>
                                 <td><span class="badge bg-success">+{{ entrada.quantidade }}</span></td>
-                                <td>{{ entrada.usuario.nome }}</td>
+                                <td>{{ entrada.usuario }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -295,7 +295,7 @@
                                 <td>{{ saida.produto.nome }}</td>
                                 <td><span class="badge bg-danger">-{{ saida.quantidade }}</span></td>
                                 <td>{{ saida.destino }}</td>
-                                <td>{{ saida.usuario.nome }}</td>
+                                <td>{{ saida.usuario }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>

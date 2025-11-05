@@ -5,7 +5,7 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2>Bem-vindo, {{ user.nome }}!</h2>
+        <h2>Bem-vindo, {{ user.username }}!</h2>
         <p class="text-muted">Nível de acesso: {{ user.nivel_acesso|title }}</p>
     </div>
 </div>
@@ -51,6 +51,26 @@
             </div>
         </div>
     </div>
+
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Cadastrar usuário</h5>
+                <p class="card-text">Acessar formulario de cadastro de usuário</p>
+                <a href="{% url 'cadastro' %}" class="btn btn-primary">Acessar</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Tabela de logs</h5>
+                <p class="card-text">Acessar tabela de logs</p>
+                <a href="{% url 'logs' %}" class="btn btn-primary">Acessar</a>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Nova seção de Gestão de Estoque -->
@@ -83,6 +103,9 @@
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="movimentacoes-tab" data-bs-toggle="tab" data-bs-target="#movimentacoes" type="button" role="tab">Movimentações</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab">Logs</button>
     </li>
 </ul>
 
@@ -156,7 +179,7 @@
                                 <td>{{ solicitacao.produto.nome }}</td>
                                 <td>{{ solicitacao.quantidade }}</td>
                                 <td>{{ solicitacao.destino }}</td>
-                                <td>{{ solicitacao.solicitante.nome }}</td>
+                                <td>{{ solicitacao.solicitante }}</td>
                                 <td>{{ solicitacao.data_solicitacao|date:"d/m/Y H:i" }}</td>
                                 <td><span class="badge bg-warning">{{ solicitacao.status }}</span></td>
                                 <td>
@@ -274,7 +297,7 @@
                                 <td>{{ entrada.produto.codigo }}</td>
                                 <td>{{ entrada.produto.nome }}</td>
                                 <td><span class="badge bg-success">+{{ entrada.quantidade }}</span></td>
-                                <td>{{ entrada.usuario.nome }}</td>
+                                <td>{{ entrada.usuario }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -315,7 +338,7 @@
                                 <td>{{ saida.produto.nome }}</td>
                                 <td><span class="badge bg-danger">-{{ saida.quantidade }}</span></td>
                                 <td>{{ saida.destino }}</td>
-                                <td>{{ saida.usuario.nome }}</td>
+                                <td>{{ saida.usuario }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -340,7 +363,6 @@
                 </div>
             </div>
         </div>
-    </div>
-    
+    </div>  
 </div>
 {% endblock %}
