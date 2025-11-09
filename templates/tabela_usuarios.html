@@ -28,7 +28,7 @@
                         <tbody>
                             {% for usuario in usuarios %}
                             <tr>
-                                <td>{{ usuario.nome }} {{ usuario.sobrenome }}</td>
+                                <td>{{ usuario.first_name }} {{ usuario.last_name }}</td>
                                 <td>{{ usuario.username }}</td>
                                 <td>
                                     {% if usuario.totp_enabled %}

@@ -5,3 +5,4 @@ reportlab
 pyotp
 qrcode[pil]
 PyJWT
+openpyxl

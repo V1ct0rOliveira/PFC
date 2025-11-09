@@ -18,37 +18,19 @@
     <div class="card-body">
         <form method="GET">
             <div class="row">
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label for="codigo" class="form-label">Código</label>
                     <input type="text" class="form-control" id="codigo" name="codigo" value="{{ filtros.codigo }}">
                 </div>
-                <div class="col-md-2">
-                    <label for="nome" class="form-label">Nome</label>
-                    <input type="text" class="form-control" id="nome" name="nome" value="{{ filtros.nome }}">
-                </div>
-                <div class="col-md-2">
-                    <label for="tipo" class="form-label">Tipo</label>
-                    <select class="form-select" id="tipo" name="tipo">
-                        <option value="">Todos</option>
-                        {% for tipo_key, tipo_label in tipos %}
-                        <option value="{{ tipo_key }}" {% if filtros.tipo == tipo_key %}selected{% endif %}>{{ tipo_label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label for="usuario" class="form-label">Usuário</label>
-                    <select class="form-select" id="usuario" name="usuario">
-                        <option value="">Todos</option>
-                        {% for usuario in usuarios %}
-                        <option value="{{ usuario.id }}" {% if filtros.usuario_id == usuario.id|stringformat:"s" %}selected{% endif %}>{{ usuario.nome }}</option>
-                        {% endfor %}
-                    </select>
+                    <input type="text" class="form-control" id="usuario" name="usuario" value="{{ filtros.usuario }}">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label for="data_inicio" class="form-label">Data Início</label>
                     <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="{{ filtros.data_inicio }}">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label for="data_fim" class="form-label">Data Fim</label>
                     <input type="date" class="form-control" id="data_fim" name="data_fim" value="{{ filtros.data_fim }}">
                 </div>
@@ -57,7 +39,7 @@
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">Filtrar</button>
                     <a href="{% url 'listar_movimentacoes' %}" class="btn btn-secondary">Limpar</a>
-                    <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">Voltar ao Dashboard</a>
+                    <a href="javascript:history.back()" class="btn btn-outline-primary">Voltar</a>
                 </div>
             </div>
         </form>

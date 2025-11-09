@@ -1,81 +1,92 @@
 {% extends "base.html" %}
-{% load static %}
 
-{% block title %}Cadastro - Sistema de Estoque{% endblock %}
-
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/cadastro.css' %}">
-<style>
-body {
-    background: linear-gradient(90deg, #091e3a, #2f80ed 50%, #2d9ee0);
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-}
-.container {
-    background: none;
-    padding: 0;
-}
-</style>
-{% endblock %}
+{% block title %}Cadastro - Stock Flow{% endblock %}
 
 {% block content %}
-<div class="form">
-    <div class="cadastro">Cadastro</div>
-    <div class="form-child"></div>
-    
-    <form method="POST">
-        {% csrf_token %}
-        
-        <!-- Nome -->
-        <div class="input-nome">
-            <input type="text" id="nome" name="first_name" placeholder="Nome" required style="background: transparent; border: none; outline: none; width: 100%; height: 100%; padding: 15px 28px; font-size: 24px; color: rgba(0,0,0,0.7);">
+<div class="row justify-content-center">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header text-center bg-primary text-white">
+                <h3 class="mb-0">Cadastro de Usuário</h3>
+                <p class="mb-0 small">Sistema de Gerenciamento de Estoque</p>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="first_name" class="form-label">Nome</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="last_name" class="form-label">Sobrenome</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Usuário</label>
+                                <input type="text" class="form-control" id="username" name="username" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">E-mail</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Senha</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nivel_acesso" class="form-label">Nível de Acesso</label>
+                                <select class="form-select" id="nivel_acesso" name="nivel_acesso" required>
+                                    <option value="comum">Usuário Comum</option>
+                                    <option value="admin">Administrador</option>
+                                    <option value="superadmin">Superadministrador</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6>Requisitos da senha:</h6>
+                        <ul class="mb-0 small">
+                            <li>Letra maiúscula</li>
+                            <li>Letra minúscula</li>
+                            <li>Número</li>
+                            <li>Caractere especial</li>
+                            <li>Mínimo 8 caracteres</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Cadastrar</button>
+                        <a href="javascript:history.back()" class="btn btn-secondary">Voltar</a>
+                    </div>
+                </form>
+            </div>
         </div>
-        
-        <!-- Sobrenome -->
-        <div class="input-sobrenome">
-            <input type="text" id="sobrenome" name="last_name" placeholder="Sobrenome" required style="background: transparent; border: none; outline: none; width: 100%; height: 100%; padding: 15px 28px; font-size: 24px; color: rgba(0,0,0,0.7);">
-        </div>
-        
-        <!-- Usuário -->
-        <div class="input-usuario">
-            <input type="text" id="username" name="username" placeholder="Usuário" required style="background: transparent; border: none; outline: none; width: 100%; height: 100%; padding: 15px 28px; font-size: 24px; color: rgba(0,0,0,0.7);">
-        </div>
-        
-        <!-- Email -->
-        <div class="input-email">
-            <input type="email" id="email" name="email" placeholder="E-mail" required style="background: transparent; border: none; outline: none; width: 100%; height: 100%; padding: 15px 28px; font-size: 24px; color: rgba(0,0,0,0.7);">
-        </div>
-        
-        <!-- Senha -->
-        <div class="input-senha">
-            <input type="password" id="password" name="password" placeholder="Senha" required style="background: transparent; border: none; outline: none; width: 100%; height: 100%; padding: 15px 28px; font-size: 24px; color: rgba(0,0,0,0.7);">
-        </div>
-        
-        <!-- Nível de Acesso -->
-        <div class="input-nivel" style="margin: 20px 0;">
-            <select name="nivel_acesso" required style="background: rgba(255,255,255,0.9); border: 2px solid #ddd; border-radius: 8px; width: 100%; padding: 15px 28px; font-size: 24px; color: rgba(0,0,0,0.7);">
-                <option value="comum">Usuário Comum</option>
-                <option value="admin">Administrador</option>
-                <option value="superadmin">Superadministrador</option>
-            </select>
-        </div>
-        
-        <!-- Requisitos da senha -->
-        <div class="letra-maiuscula-letra-container">
-            <ul class="letra-maiuscula-letra-minuscu">
-                <li>Letra maiúscula</li>
-                <li>Letra minúscula</li>
-                <li>Número</li>
-                <li>Caractere especial</il>
-                <li>Mínimo 8 caracteres</li>
-            </ul>
-        </div>
-        
-        <!-- Botão Cadastrar -->
-        <button type="submit" class="button" style="display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;">
-            <span style="font-size: 32px; color: #fff; font-family: Jomhuria;">Cadastrar</span>
-        </button>
-    </form>
+    </div>
 </div>
 {% endblock %}

@@ -58,21 +58,22 @@ python manage.py runserver
 - **Superadministrador**: Todas as permissões + logs e gestão de usuários
 
 ### Recursos Principais
-- 🟡 Gestão completa de produtos
-- 🟡 Movimentações (entradas, saídas, ajustes)
-- 🟡 Dashboard com estatísticas em tempo real
-- 🟡 Notificações de estoque baixo
-- 🟡 Relatórios em PDF, Excel e Word
-- 🟡 Interface responsiva com Bootstrap 5
-- 🟡 Logs de atividades detalhados
+- 🟢 Gestão completa de produtos
+- 🟢 Movimentações (solicitações, entradas, saídas e ajustes)
+- 🟢 Controle de acessos por nível de usuário (comum, admin e superadmin)
+- 🟢 Notificações de movimentações por e-mail
+- 🟢 Autenticação 2FA com authenticator 
+- 🟢 Relatórios em PDF e Excel
+- 🟢 Interface responsiva com Bootstrap 5
+- 🟢 Logs de atividades detalhados
 
 ## 🔧 Tecnologias
 
 - **Backend**: Django 4.2 + Django REST Framework
-- **Frontend**: Flask + Jinja2 + Bootstrap 5
-- **Banco**: SQLite (desenvolvimento) / PostgreSQL (produção)
-- **Autenticação**: JWT
-- **Relatórios**: python-docx, openpyxl, reportlab
+- **Frontend**: Bootstrap 5
+- **Banco**: PostgreSQL (supabase)
+- **Autenticação**: JWT e authenticator
+- **Relatórios**: openpyxl, reportlab
 
 ## 📝 URLs Disponíveis
 

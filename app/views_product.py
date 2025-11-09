@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.utils import timezone
 from decouple import config
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from .models import CustomUser, Product, Solicitacao, Movimentacao, Saidas, Entradas
 from .views_log import registrar_log
 
@@ -24,7 +24,7 @@ def cadastro_produto(request):
         quantidade = int(request.POST['quantidade'])
         local = request.POST['local']
         codigo = request.POST['codigo']
-        carencia = request.POST.get('carencia') == 'on'
+        carencia = request.POST['carencia']
         
         if Product.objects.filter(codigo=codigo).exists():
             messages.error(request, 'Código do produto já existe')
@@ -59,7 +59,85 @@ def cadastro_produto(request):
 def estoque_geral(request):
     """View para exibir o estoque geral de produtos"""
     produtos = Product.objects.all()
-    return render(request, 'estoque_geral.html', {'produtos': produtos})
+    
+    codigo = request.GET.get('codigo', '').strip()
+    nome = request.GET.get('nome', '').strip()
+    
+    if codigo:
+        produtos = produtos.filter(codigo__icontains=codigo)
+    if nome:
+        produtos = produtos.filter(nome__icontains=nome)
+    
+    context = {
+        'produtos': produtos,
+        'filtros': {
+            'codigo': codigo,
+            'nome': nome,
+        }
+    }
+    
+    return render(request, 'estoque_geral.html', context)
+
+@login_required
+def deletar_produto(request, produto_id):
+    """View para deletar produto - APENAS ADMIN/SUPERADMIN"""
+    if request.user.nivel_acesso == 'comum':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_comum')
+    
+    produto = get_object_or_404(Product, id=produto_id)
+    
+    if request.method == 'POST':
+        nome_produto = produto.nome
+        codigo_produto = produto.codigo
+        
+        # Registrar log antes de deletar
+        registrar_log(
+            acao="Produto deletado",
+            usuario=request.user,
+            detalhes=f"Deletou produto: {nome_produto} (Código: {codigo_produto})"
+        )
+        
+        produto.delete()
+        
+        messages.success(request, f'Produto {nome_produto} deletado com sucesso!')
+        return redirect('estoque_geral')
+    
+    return redirect('estoque_geral')
+
+@login_required
+def editar_produto(request, produto_id):
+    """View para editar produto - APENAS ADMIN/SUPERADMIN"""
+    if request.user.nivel_acesso == 'comum':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_comum')
+    
+    produto = get_object_or_404(Product, id=produto_id)
+    
+    if request.method == 'POST':
+        nome_antigo = produto.nome
+        produto.nome = request.POST.get('nome', produto.nome)
+        produto.local = request.POST.get('local', produto.local)
+        produto.carencia = int(request.POST.get('carencia', produto.carencia))
+        produto.save()
+        
+        # Registrar log
+        registrar_log(
+            acao="Produto editado",
+            usuario=request.user,
+            detalhes=f"Editou produto: {nome_antigo} -> {produto.nome} (Código: {produto.codigo})"
+        )
+        
+        messages.success(request, f'Produto {produto.nome} editado com sucesso!')
+        if request.user.nivel_acesso == 'admin':
+            return redirect('dashboard_admin')
+        else:
+            return redirect('dashboard_super')
+    
+    if request.user.nivel_acesso == 'admin':
+        return redirect('dashboard_admin')
+    else:
+        return redirect('dashboard_super')
 
 # ============================================================================
 # FUNÇÕES DE ESTOQUE - MOVIMENTAÇÕES
@@ -74,38 +152,25 @@ def listar_movimentacoes(request):
     
     movimentacoes = Movimentacao.objects.select_related('produto').order_by('-data_hora')
     
-    codigo = request.GET.get('codigo')
-    nome = request.GET.get('nome')
-    tipo = request.GET.get('tipo')
-    usuario_id = request.GET.get('usuario')
-    data_inicio = request.GET.get('data_inicio')
-    data_fim = request.GET.get('data_fim')
+    codigo = request.GET.get('codigo', '').strip()
+    usuario = request.GET.get('usuario', '').strip()
+    data_inicio = request.GET.get('data_inicio', '').strip()
+    data_fim = request.GET.get('data_fim', '').strip()
     
     if codigo:
         movimentacoes = movimentacoes.filter(produto__codigo__icontains=codigo)
-    if nome:
-        movimentacoes = movimentacoes.filter(produto__nome__icontains=nome)
-    if tipo:
-        movimentacoes = movimentacoes.filter(tipo=tipo)
-    if usuario_id:
-        movimentacoes = movimentacoes.filter(usuario__icontains=usuario_id)
+    if usuario:
+        movimentacoes = movimentacoes.filter(usuario__icontains=usuario)
     if data_inicio:
         movimentacoes = movimentacoes.filter(data_hora__date__gte=data_inicio)
     if data_fim:
         movimentacoes = movimentacoes.filter(data_hora__date__lte=data_fim)
     
-    usuarios = CustomUser.objects.all()
-    tipos = Movimentacao.TIPO_CHOICES
-    
     context = {
         'movimentacoes': movimentacoes[:100],
-        'usuarios': usuarios,
-        'tipos': tipos,
         'filtros': {
             'codigo': codigo,
-            'nome': nome,
-            'tipo': tipo,
-            'usuario_id': usuario_id,
+            'usuario': usuario,
             'data_inicio': data_inicio,
             'data_fim': data_fim,
         }
@@ -170,6 +235,78 @@ def solicitar_produto(request):
             observacao=f'Solicitação #{solicitacao.id} criada - Destino: {destino}'
         )
         
+        # Enviar email para administradores
+        admins = CustomUser.objects.filter(nivel_acesso__in=['admin', 'superadmin'])
+        emails_admins = [admin.email for admin in admins if admin.email]
+        
+        if emails_admins:
+            try:
+                html_content = f'''
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+                        .container {{ max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                        .header {{ background-color: #007bff; color: white; padding: 20px; text-align: center; }}
+                        .content {{ padding: 30px; }}
+                        .info-box {{ background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 20px 0; }}
+                        .footer {{ background-color: #6c757d; color: white; padding: 15px; text-align: center; font-size: 12px; }}
+                        .btn {{ display: inline-block; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; margin: 10px 5px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🔔 Nova Solicitação de Produto</h1>
+                            <p>Stock Flow - Sistema de Gerenciamento de Estoque</p>
+                        </div>
+                        <div class="content">
+                            <h2>Solicitação #{solicitacao.id}</h2>
+                            <p>Uma nova solicitação foi criada e precisa de sua validação:</p>
+                            
+                            <div class="info-box">
+                                <p><strong>👤 Solicitante:</strong> {request.user.username}</p>
+                                <p><strong>📦 Produto:</strong> {produto.nome}</p>
+                                <p><strong>🏷️ Código:</strong> {produto.codigo}</p>
+                                <p><strong>📊 Quantidade:</strong> {quantidade} unidades</p>
+                                <p><strong>📍 Destino:</strong> {destino}</p>
+                                <p><strong>📅 Data:</strong> {timezone.localtime(solicitacao.data_solicitacao).strftime('%d/%m/%Y às %H:%M')}</p>
+                            </div>
+                            
+                            <p>Por favor, acesse o sistema para aprovar ou reprovar esta solicitação.</p>
+                        </div>
+                        <div class="footer">
+                            <p>Este é um email automático. Não responda a esta mensagem.</p>
+                            <p>Stock Flow &copy; 2025 - Sistema de Gerenciamento de Estoque</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                '''
+                
+                text_content = f'''Nova Solicitação de Produto - Stock Flow
+
+Solicitação #{solicitacao.id}
+Solicitante: {request.user.username}
+Produto: {produto.nome} (Código: {produto.codigo})
+Quantidade: {quantidade}
+Destino: {destino}
+Data: {timezone.localtime(solicitacao.data_solicitacao).strftime('%d/%m/%Y %H:%M')}
+
+Por favor, acesse o sistema para aprovar ou reprovar esta solicitação.'''
+                
+                msg = EmailMultiAlternatives(
+                    'Nova Solicitação de Produto - Stock Flow',
+                    text_content,
+                    config('EMAIL_HOST_USER'),
+                    emails_admins
+                )
+                msg.attach_alternative(html_content, "text/html")
+                msg.send(fail_silently=True)
+            except Exception:
+                pass
+        
         # Registrar log no banco
         registrar_log(
             acao="Solicitação criada",
@@ -231,6 +368,64 @@ def aprovar_solicitacao(request, solicitacao_id):
             referencia_id=solicitacao.id,
             observacao=f'Solicitação #{solicitacao.id} aprovada e retirada executada automaticamente - Destino: {solicitacao.destino}'
         )
+        
+        # Enviar email de aprovação
+        email = "beltramevictor13@gmail.com"
+        try:
+            html_content = f'''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                    .header {{ background-color: #28a745; color: white; padding: 20px; text-align: center; }}
+                    .content {{ padding: 30px; }}
+                    .info-box {{ background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; }}
+                    .footer {{ background-color: #6c757d; color: white; padding: 15px; text-align: center; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>✅ Solicitação Aprovada</h1>
+                        <p>Stock Flow - Sistema de Gerenciamento de Estoque</p>
+                    </div>
+                    <div class="content">
+                        <h2>Solicitação #{solicitacao.id} Aprovada</h2>
+                        <p>Uma solicitação foi aprovada e o produto foi retirado do estoque:</p>
+                        
+                        <div class="info-box">
+                            <p><strong>👤 Solicitante:</strong> {solicitacao.solicitante}</p>
+                            <p><strong>👨‍💼 Aprovador:</strong> {request.user.username}</p>
+                            <p><strong>📦 Produto:</strong> {produto.nome}</p>
+                            <p><strong>🏷️ Código:</strong> {produto.codigo}</p>
+                            <p><strong>📊 Quantidade:</strong> -{solicitacao.quantidade} unidades</p>
+                            <p><strong>📍 Destino:</strong> {solicitacao.destino}</p>
+                            <p><strong>📅 Data Aprovação:</strong> {timezone.localtime().strftime('%d/%m/%Y às %H:%M')}</p>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <p>Este é um email automático. Não responda a esta mensagem.</p>
+                        <p>Stock Flow &copy; 2025 - Sistema de Gerenciamento de Estoque</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            '''
+            
+            text_content = f'Solicitação Aprovada - A solicitação #{solicitacao.id} foi aprovada por {request.user.username}. Produto: {produto.nome}, Quantidade: {solicitacao.quantidade}, Destino: {solicitacao.destino}.'
+            
+            msg = EmailMultiAlternatives(
+                'Solicitação Aprovada - Stock Flow',
+                text_content,
+                config('EMAIL_HOST_USER'),
+                [email]
+            )
+            msg.attach_alternative(html_content, "text/html")
+            msg.send(fail_silently=True)
+        except Exception:
+            pass
         
         # Registrar log no banco
         registrar_log(
@@ -322,13 +517,56 @@ def entrada_produto(request):
                 usuario=request.user.username,
             )
 
-            send_mail(
-                'Entrada de Produto',
-                f'O usuário {request.user.username} realizou a entrada de {quantidade} unidades do produto {produto.nome}.',
-                'noreply@sistema.com',
-                [email],
-                fail_silently=True,
+            html_content = f'''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                    .header {{ background-color: #28a745; color: white; padding: 20px; text-align: center; }}
+                    .content {{ padding: 30px; }}
+                    .info-box {{ background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; }}
+                    .footer {{ background-color: #6c757d; color: white; padding: 15px; text-align: center; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>⬆️ Entrada de Produto</h1>
+                        <p>Stock Flow - Sistema de Gerenciamento de Estoque</p>
+                    </div>
+                    <div class="content">
+                        <h2>Nova Entrada Registrada</h2>
+                        <p>Uma entrada de produto foi registrada no sistema:</p>
+                        
+                        <div class="info-box">
+                            <p><strong>👤 Usuário:</strong> {request.user.username}</p>
+                            <p><strong>📦 Produto:</strong> {produto.nome}</p>
+                            <p><strong>🏷️ Código:</strong> {produto.codigo}</p>
+                            <p><strong>📊 Quantidade:</strong> +{quantidade} unidades</p>
+                            <p><strong>📅 Data:</strong> {timezone.localtime().strftime('%d/%m/%Y às %H:%M')}</p>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <p>Este é um email automático. Não responda a esta mensagem.</p>
+                        <p>Stock Flow &copy; 2025 - Sistema de Gerenciamento de Estoque</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            '''
+            
+            text_content = f'Entrada de Produto - O usuário {request.user.username} realizou a entrada de {quantidade} unidades do produto {produto.nome}.'
+            
+            msg = EmailMultiAlternatives(
+                'Entrada de Produto - Stock Flow',
+                text_content,
+                config('EMAIL_HOST_USER'),
+                [email]
             )
+            msg.attach_alternative(html_content, "text/html")
+            msg.send(fail_silently=True)
             
             # Registrar log no banco
             registrar_log(
@@ -338,102 +576,6 @@ def entrada_produto(request):
             )
         
         messages.success(request, f'Entrada de {quantidade} unidades de {produto.nome} registrada!')
-        if request.user.nivel_acesso == 'comum':
-            return redirect('dashboard_comum')
-        elif request.user.nivel_acesso == 'admin':
-            return redirect('dashboard_admin')
-        else:
-            return redirect('dashboard_super')
-    
-    if request.user.nivel_acesso == 'comum':
-        return redirect('dashboard_comum')
-    elif request.user.nivel_acesso == 'admin':
-        return redirect('dashboard_admin')
-    else:
-        return redirect('dashboard_super')
-
-@login_required
-def retirada_direta(request):
-    """View para retirada direta de produtos (sem solicitação)"""
-    if request.method == 'POST':
-        email = "beltramevictor13@gmail.com"
-        codigo = request.POST.get('codigo')
-        quantidade = int(request.POST.get('quantidade', 0))
-        destino = request.POST.get('destino', '').strip()
-        
-        if quantidade <= 0:
-            messages.error(request, 'Quantidade deve ser maior que zero')
-            if request.user.nivel_acesso == 'comum':
-                return redirect('dashboard_comum')
-            elif request.user.nivel_acesso == 'admin':
-                return redirect('dashboard_admin')
-            else:
-                return redirect('dashboard_super')
-        
-        if not destino:
-            messages.error(request, 'Campo destino é obrigatório')
-            if request.user.nivel_acesso == 'comum':
-                return redirect('dashboard_comum')
-            elif request.user.nivel_acesso == 'admin':
-                return redirect('dashboard_admin')
-            else:
-                return redirect('dashboard_super')
-        
-        try:
-            produto = Product.objects.get(codigo=codigo)
-        except Product.DoesNotExist:
-            messages.error(request, 'Produto não encontrado')
-            if request.user.nivel_acesso == 'comum':
-                return redirect('dashboard_comum')
-            elif request.user.nivel_acesso == 'admin':
-                return redirect('dashboard_admin')
-            else:
-                return redirect('dashboard_super')
-        
-        if produto.quantidade < quantidade:
-            messages.error(request, f'Estoque insuficiente. Disponível: {produto.quantidade}, Solicitado: {quantidade}')
-            if request.user.nivel_acesso == 'comum':
-                return redirect('dashboard_comum')
-            elif request.user.nivel_acesso == 'admin':
-                return redirect('dashboard_admin')
-            else:
-                return redirect('dashboard_super')
-        
-        with transaction.atomic():
-            produto.quantidade -= quantidade
-            produto.save()
-            
-            Saidas.objects.create(
-                produto=produto,
-                quantidade=quantidade,
-                destino=destino,
-                usuario=request.user.username,
-            )
-            
-            Movimentacao.objects.create(
-                tipo='RETIRADA',
-                produto=produto,
-                quantidade=quantidade,
-                usuario=request.user.username,
-                observacao=f'Retirada direta de {quantidade} unidades - Destino: {destino}'
-            )
-
-            send_mail(
-                'Retirada de Produto',
-                f'O usuário {request.user.username} realizou a retirada de {quantidade} unidades do produto {produto.nome}.',
-                'noreply@sistema.com',
-                [email],
-                fail_silently=True,
-            )
-            
-            # Registrar log no banco
-            registrar_log(
-                acao="Retirada direta",
-                usuario=request.user.username,
-                detalhes=f"Retirou {quantidade} unidades do produto: {produto.nome} - Destino: {destino}"
-            )
-        
-        messages.success(request, f'Retirada de {quantidade} unidades de {produto.nome} realizada com sucesso!')
         if request.user.nivel_acesso == 'comum':
             return redirect('dashboard_comum')
         elif request.user.nivel_acesso == 'admin':

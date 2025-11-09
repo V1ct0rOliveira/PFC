@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser
-from .models import Product, Entradas, Saidas, Solicitacao, Movimentacao
+from .models import Product, Entradas, Saidas, Solicitacao, Movimentacao, logs
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
@@ -67,5 +67,16 @@ class MovimentacaoAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Detalhes da Movimentação', {
             'fields': ('tipo', 'produto', 'quantidade', 'usuario')
+        }),
+    )
+
+@admin.register(logs)
+class LogsAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'acao', 'data_hora')
+    search_fields = ('usuario__username', 'acao', 'data_hora')
+
+    fieldsets = (
+        ('Detalhes do Log', {
+            'fields': ('usuario', 'acao')
         }),
     )

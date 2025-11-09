@@ -1,4 +1,3 @@
-# Importações necessárias do Django e outras bibliotecas
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout  
 from django.contrib.auth.decorators import login_required  
@@ -52,7 +51,7 @@ def cadastro(request):
         password = request.POST['password']
         nome = request.POST['first_name']
         sobrenome = request.POST['last_name']
-        nivel_acesso = request.POST.get('nivel_acesso', 'comum')
+        nivel_acesso = request.POST['nivel_acesso']
         
         if CustomUser.objects.filter(username=username).exists():
             messages.error(request, 'Usuário já existe')
@@ -283,7 +282,7 @@ def setup_totp(request):
                 elif user.nivel_acesso == 'superadmin':
                     return redirect('dashboard_super')
             else:
-                messages.error(request, f'Código inválido. Token atual do servidor: {current_token}')
+                messages.error(request, 'Código inválido. Verifique se o código está correto e tente novamente.')
         except ImportError:
             messages.error(request, 'Erro: Biblioteca pyotp não instalada')
         except Exception as e:
@@ -376,3 +375,37 @@ def reset_user_totp(request, user_id):
     
     messages.success(request, f'Autenticação 2FA resetada para {user.username}')
     return redirect('dashboard_super')
+
+@login_required
+def deletar_conta(request):
+    """View para deletar conta do usuário"""
+    if request.method == 'POST':
+        user = request.user
+        username = user.username
+        
+        # Registrar log antes de deletar
+        registrar_log(
+            acao="Conta deletada",
+            usuario=user,
+            detalhes=f"Usuário {username} deletou sua própria conta"
+        )
+        
+        # Anonimizar dados em todas as tabelas
+        from .models import Entradas, Saidas, Solicitacao, Movimentacao, logs as LogsModel
+        
+        # Atualizar registros para "Usuário Excluído"
+        Entradas.objects.filter(usuario=username).update(usuario="Usuário Excluído")
+        Saidas.objects.filter(usuario=username).update(usuario="Usuário Excluído")
+        Solicitacao.objects.filter(solicitante=username).update(solicitante="Usuário Excluído")
+        Solicitacao.objects.filter(aprovador=username).update(aprovador="Usuário Excluído")
+        Movimentacao.objects.filter(usuario=username).update(usuario="Usuário Excluído")
+        LogsModel.objects.filter(usuario=username).update(usuario="Usuário Excluído")
+        
+        # Fazer logout e deletar usuário
+        auth_logout(request)
+        user.delete()
+        
+        messages.success(request, 'Sua conta foi excluída com sucesso.')
+        return redirect('home')
+    
+    return redirect('perfil')

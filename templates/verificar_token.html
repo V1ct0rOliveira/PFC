@@ -1,16 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}Verificar Token - Sistema de Estoque{% endblock %}
+{% block title %}Verificar Token - Stock Flow{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h4>Verificar Token</h4>
+    <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-header text-center bg-primary text-white">
+                <h3 class="mb-0">Verificar Token</h3>
+                <p class="mb-0 small">Sistema de Gerenciamento de Estoque</p>
             </div>
             <div class="card-body">
-                <p class="text-muted">Digite o token de 6 dígitos enviado para seu email.</p>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <p class="text-muted text-center">Digite o token de 6 dígitos enviado para seu email.</p>
                 
                 <form method="POST">
                     {% csrf_token %}
@@ -18,13 +28,12 @@
                         <label for="token" class="form-label">Token</label>
                         <input type="text" class="form-control" id="token" name="token" maxlength="6" required>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Verificar Token</button>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Verificar Token</button>
+                        <a href="{% url 'esqueci_senha' %}" class="btn btn-outline-primary">Solicitar novo token</a>
+                        <a href="javascript:history.back()" class="btn btn-secondary">Voltar</a>
+                    </div>
                 </form>
-                
-                <div class="text-center mt-3">
-                    <p><a href="{% url 'esqueci_senha' %}">Solicitar novo token</a></p>
-                    <p><a href="{% url 'login' %}">Voltar ao login</a></p>
-                </div>
             </div>
         </div>
     </div>

@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, views_api, views_users, views_product
+from . import views, views_api, views_users, views_product, views_reports
 
 urlpatterns = [
     
@@ -11,8 +11,12 @@ urlpatterns = [
     path('dashboard_super/', views.dashboard_super, name='dashboard_super'),
     path('logs/', views.logs, name='logs'),
 
+    # URLs de termos de uso
+    path('termos/', views.termos, name='termos'),
+
     # URLs de geração de relatórios
-    path('gerar_relatorio_pdf/', views.gerar_relatorio_pdf, name='gerar_relatorio_pdf'),
+    path('relatorio_pdf_geral/', views_reports.relatorio_pdf_geral, name='relatorio_pdf_geral'),
+    path('relatorio_excel_geral/', views_reports.relatorio_excel_geral, name='relatorio_excel_geral'),
 
     # URLs de autenticação e perfil do usuário
     path('cadastro/', views_users.cadastro, name='cadastro'),
@@ -26,6 +30,7 @@ urlpatterns = [
     path('verify_totp/', views_users.verify_totp, name='verify_totp'),
     path('reset_user_totp/<int:user_id>/', views_users.reset_user_totp, name='reset_user_totp'),
     path('tabela_usuarios/', views_users.tabela_usuarios, name='tabela_usuarios'),
+    path('deletar_conta/', views_users.deletar_conta, name='deletar_conta'),
 
     # URLs de API
     path('api/listar_produtos/', views_api.listar_produtos_api, name='listar_produtos_api'),
@@ -40,6 +45,7 @@ urlpatterns = [
     path('aprovar-solicitacao/<int:solicitacao_id>/', views_product.aprovar_solicitacao, name='aprovar_solicitacao'),
     path('reprovar-solicitacao/<int:solicitacao_id>/', views_product.reprovar_solicitacao, name='reprovar_solicitacao'),
     path('entrada-produto/', views_product.entrada_produto, name='entrada_produto'),
-    path('retirada-direta/', views_product.retirada_direta, name='retirada_direta'),
     path('movimentacoes/', views_product.listar_movimentacoes, name='listar_movimentacoes'),
+    path('deletar-produto/<int:produto_id>/', views_product.deletar_produto, name='deletar_produto'),
+    path('editar-produto/<int:produto_id>/', views_product.editar_produto, name='editar_produto'),
 ]

@@ -18,19 +18,15 @@
     <div class="card-body">
         <form method="GET">
             <div class="row">
-                <div class="col-md-3">
-                    <label for="acao" class="form-label">Ação</label>
-                    <input type="text" class="form-control" id="acao" name="acao" value="{{ filtros.acao }}" placeholder="Ex: Login, Cadastro...">
-                </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label for="usuario" class="form-label">Usuário</label>
                     <input type="text" class="form-control" id="usuario" name="usuario" value="{{ filtros.usuario }}" placeholder="Nome do usuário">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label for="data_inicio" class="form-label">Data Início</label>
                     <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="{{ filtros.data_inicio }}">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label for="data_fim" class="form-label">Data Fim</label>
                     <input type="date" class="form-control" id="data_fim" name="data_fim" value="{{ filtros.data_fim }}">
                 </div>
@@ -39,7 +35,7 @@
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">Filtrar</button>
                     <a href="{% url 'logs' %}" class="btn btn-secondary">Limpar</a>
-                    <a href="{% url 'dashboard_super' %}" class="btn btn-outline-primary">Voltar ao Dashboard</a>
+                    <a href="javascript:history.back()" class="btn btn-outline-primary">Voltar</a>
                 </div>
             </div>
         </form>
