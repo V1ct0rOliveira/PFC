@@ -11,9 +11,6 @@ urlpatterns = [
     path('dashboard_super/', views.dashboard_super, name='dashboard_super'),
     path('logs/', views.logs, name='logs'),
 
-    # URLs de termos de uso
-    path('termos/', views.termos, name='termos'),
-
     # URLs de geração de relatórios
     path('relatorio_pdf_geral/', views_reports.relatorio_pdf_geral, name='relatorio_pdf_geral'),
     path('relatorio_excel_geral/', views_reports.relatorio_excel_geral, name='relatorio_excel_geral'),
@@ -21,6 +18,7 @@ urlpatterns = [
     # URLs de autenticação e perfil do usuário
     path('cadastro/', views_users.cadastro, name='cadastro'),
     path('login/', views_users.login, name='login'),
+    path('aceitar_termos/', views_users.aceitar_termos, name='aceitar_termos'),
     path('perfil/', views_users.perfil, name='perfil'),
     path('logout/', views_users.logout, name='logout'),
     path('esqueci_senha/', views_users.esqueci_senha, name='esqueci_senha'),

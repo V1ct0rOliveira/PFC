@@ -10,6 +10,8 @@ class CustomUser(AbstractUser):
     nivel_acesso = models.CharField(max_length=50)
     totp_secret = models.CharField(max_length=32, blank=True, null=True)
     totp_enabled = models.BooleanField(default=False)
+    termos_uso_aceitos = models.BooleanField(default=False)
+    politicas_privacidade_aceitas = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username

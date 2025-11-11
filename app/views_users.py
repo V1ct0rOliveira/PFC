@@ -49,12 +49,17 @@ def cadastro(request):
         username = request.POST['username']
         email = request.POST['email']
         password = request.POST['password']
+        confirmar_senha = request.POST['confirmar_senha']
         nome = request.POST['first_name']
         sobrenome = request.POST['last_name']
         nivel_acesso = request.POST['nivel_acesso']
         
         if CustomUser.objects.filter(username=username).exists():
             messages.error(request, 'Usuário já existe')
+            return render(request, 'cadastro.html')
+        
+        if password != confirmar_senha:
+            messages.error(request, 'As senhas não coincidem')
             return render(request, 'cadastro.html')
         
         senha_valida, mensagem = validar_senha_forte(password)
@@ -91,7 +96,10 @@ def login(request):
         
         user = authenticate(request, username=username, password=password)
         if user:
-            if not user.totp_enabled:
+            if not user.termos_uso_aceitos or not user.politicas_privacidade_aceitas:
+                request.session['terms_user_id'] = user.id
+                return redirect('aceitar_termos')
+            elif not user.totp_enabled:
                 request.session['setup_user_id'] = user.id
                 return redirect('setup_totp')
             else:
@@ -247,6 +255,46 @@ def nova_senha(request):
         return redirect('login')
     
     return render(request, 'nova_senha.html')
+
+# ============================================================================
+# FUNÇÕES DE ACEITE DOS TERMOS DE USO E POLÍTICAS DE PRIVACIDADE
+# ============================================================================
+
+def aceitar_termos(request):
+    """View para aceite de termos de uso e políticas de privacidade"""
+    if 'terms_user_id' not in request.session:
+        return redirect('login')
+    
+    user = CustomUser.objects.get(id=request.session['terms_user_id'])
+    
+    if request.method == 'POST':
+        aceito_termos_uso = request.POST.get('aceito_termos_uso')
+        aceito_politicas_privacidade = request.POST.get('aceito_politicas_privacidade')
+        
+        if aceito_termos_uso == 'on' and aceito_politicas_privacidade == 'on':
+            user.termos_uso_aceitos = True
+            user.politicas_privacidade_aceitas = True
+            user.save()
+            
+            # Registrar log
+            registrar_log(
+                acao="Termos e políticas aceitos",
+                usuario=user,
+                detalhes=f"Usuário {user.username} aceitou os termos de uso e políticas de privacidade"
+            )
+            
+            del request.session['terms_user_id']
+            
+            if not user.totp_enabled:
+                request.session['setup_user_id'] = user.id
+                return redirect('setup_totp')
+            else:
+                request.session['login_user_id'] = user.id
+                return redirect('verify_totp')
+        else:
+            messages.error(request, 'Você deve aceitar tanto os termos de uso quanto as políticas de privacidade para continuar.')
+    
+    return render(request, 'aceitar_termos.html')
 
 # ============================================================================
 # FUNÇÕES DE AUTENTICAÇÃO 2FA

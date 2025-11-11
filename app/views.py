@@ -15,24 +15,6 @@ def home(request):
         auth_logout(request)
     return render(request, 'home.html')
 
-def termos(request):
-    """View para servir o PDF dos termos de uso"""
-    from django.http import FileResponse
-    import os
-    from django.conf import settings
-    
-    pdf_path = os.path.join(settings.BASE_DIR, 'termos', 'Termo_de_Uso_StockFlow.pdf')
-    
-    try:
-        return FileResponse(
-            open(pdf_path, 'rb'),
-            content_type='application/pdf',
-            filename='Termos_de_Uso_StockFlow.pdf'
-        )
-    except FileNotFoundError:
-        from django.http import Http404
-        raise Http404("Arquivo de termos de uso não encontrado")
-
 # ============================================================================
 # FUNÇÕES DE DASHBOARD
 # ============================================================================
