@@ -10,6 +10,7 @@ urlpatterns = [
     path('dashboard_admin/', views.dashboard_admin, name='dashboard_admin'),
     path('dashboard_super/', views.dashboard_super, name='dashboard_super'),
     path('logs/', views.logs, name='logs'),
+    path('termos-politicas/', views.termos_politicas, name='termos_politicas'),
 
     # URLs de geração de relatórios
     path('relatorio_pdf_geral/', views_reports.relatorio_pdf_geral, name='relatorio_pdf_geral'),

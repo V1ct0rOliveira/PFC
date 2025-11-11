@@ -15,6 +15,10 @@ def home(request):
         auth_logout(request)
     return render(request, 'home.html')
 
+def termos_politicas(request):
+    """View para exibir termos de uso e políticas de privacidade"""
+    return render(request, 'termos_politicas.html')
+
 # ============================================================================
 # FUNÇÕES DE DASHBOARD
 # ============================================================================
