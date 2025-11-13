@@ -6,3 +6,6 @@ pyotp
 qrcode[pil]
 PyJWT
 openpyxl
+gunicorn
+whitenoise
+python-dotenv
