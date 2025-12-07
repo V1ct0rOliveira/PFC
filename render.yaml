@@ -4,6 +4,3 @@ services:
     env: python
     buildCommand: "./build.sh"
     startCommand: "gunicorn estoque_project.wsgi:application"
-    envVars:
-      - key: DJANGO_SETTINGS_MODULE
-        value: PFC.settings
