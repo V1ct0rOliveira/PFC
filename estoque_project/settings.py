@@ -27,7 +27,11 @@ SECRET_KEY = 'django-insecure-3dvntvb)zo56(haa=&^%cbyxi_i3jhmi&$4@fiq9d_gxqgp@4z
 DEBUG = True
 
 import os
-ALLOWED_HOSTS = ["*", os.environ.get("RENDER_EXTERNAL_HOSTNAME")]
+ALLOWED_HOSTS = ['localhost']
+render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if render_host:
+    ALLOWED_HOSTS.append(render_host)
+
 
 # Application definition
 
@@ -43,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -70,6 +75,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'estoque_project.wsgi.application'
 
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -122,6 +128,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
