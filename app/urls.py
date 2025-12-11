@@ -29,7 +29,7 @@ urlpatterns = [
     path('verify_totp/', views_users.verify_totp, name='verify_totp'),
     path('reset_user_totp/<int:user_id>/', views_users.reset_user_totp, name='reset_user_totp'),
     path('tabela_usuarios/', views_users.tabela_usuarios, name='tabela_usuarios'),
-    path('deletar_conta/', views_users.deletar_conta, name='deletar_conta'),
+    path('deletar_usuario/<int:user_id>/', views_users.deletar_usuario, name='deletar_usuario'),
 
     # URLs de API
     path('api/listar_produtos/', views_api.listar_produtos_api, name='listar_produtos_api'),

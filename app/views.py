@@ -98,7 +98,9 @@ def logs(request):
         messages.error(request, 'Acesso negado')
         return redirect('dashboard_super')
     
+    from django.core.paginator import Paginator
     from .models import logs as LogsModel
+    
     logs_list = LogsModel.objects.all().order_by('-data_hora')
     
     usuario = request.GET.get('usuario', '').strip()
@@ -112,8 +114,12 @@ def logs(request):
     if data_fim:
         logs_list = logs_list.filter(data_hora__date__lte=data_fim)
     
+    paginator = Paginator(logs_list, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     context = {
-        'logs': logs_list[:200],
+        'page_obj': page_obj,
         'filtros': {
             'usuario': usuario,
             'data_inicio': data_inicio,

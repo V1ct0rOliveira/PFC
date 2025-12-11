@@ -1,6 +1,9 @@
 # Configurações
 .env
 
+# Arquivos de banco de dados
+migrations/
+
 #Ambiente virtual
 venv/
 env/

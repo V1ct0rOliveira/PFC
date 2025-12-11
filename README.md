@@ -26,6 +26,9 @@ pip install -r requirements.txt
 ### 4. Criar arquivo .env
 Crie um arquivo `.env` na raiz do projeto com:
 ```bash
+# Configurações de Segurança
+SECRET_KEY=sua_secret_key_aqui
+
 # Configurações do Supabase
 DB_NAME=nome_do_database
 DB_USER=nome_do_user
@@ -38,6 +41,10 @@ EMAIL_HOST_USER=email_do_site@gmail.com
 EMAIL_HOST_PASSWORD=senha_app_do_email
 EMAIL_PORT=porta_do_email
 DEFAULT_FROM_EMAIL=email_do_site@gmail.com
+
+# Configurações WhatsApp UltraMsg
+ULTRAMSG_INSTANCE_ID=instance_id_da_ultramsg
+ULTRAMSG_TOKEN=token_da_ultramsg
 ```
 
 ### 5. Executar o sistema
@@ -61,7 +68,7 @@ python manage.py runserver
 - 🟢 Gestão completa de produtos
 - 🟢 Movimentações (solicitações, entradas, saídas e ajustes)
 - 🟢 Controle de acessos por nível de usuário (comum, admin e superadmin)
-- 🟢 Notificações de movimentações por e-mail
+- 🟢 Notificações por e-mail e WhatsApp
 - 🟢 Autenticação 2FA com authenticator 
 - 🟢 Relatórios em PDF e Excel
 - 🟢 Interface responsiva com Bootstrap 5

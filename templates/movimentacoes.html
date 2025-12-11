@@ -52,7 +52,7 @@
         <h5>Movimentações</h5>
     </div>
     <div class="card-body">
-        {% if movimentacoes %}
+        {% if page_obj %}
         <div class="table-responsive">
             <table class="table table-striped">
                 <thead>
@@ -68,7 +68,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for mov in movimentacoes %}
+                    {% for mov in page_obj %}
                     <tr>
                         <td>
                             {% if mov.tipo == 'ENTRADA' %}
@@ -81,33 +81,52 @@
                                 <span class="badge bg-danger">{{ mov.get_tipo_display }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ mov.produto.codigo }}</td>
-                        <td>{{ mov.produto.nome }}</td>
-                        <td>
+                        <td><code>{{ mov.produto.codigo }}</code></td>
+                        <td class="text-truncate" style="max-width: 150px;" title="{{ mov.produto.nome }}">{{ mov.produto.nome }}</td>
+                        <td class="text-center">
                             {% if mov.quantidade %}
                                 {{ mov.quantidade }}
                             {% else %}
                                 -
                             {% endif %}
                         </td>
-                        <td>{{ mov.data_hora|date:"d/m/Y H:i:s" }}</td>
-                        <td>{{ mov.usuario }}</td>
-                        <td>
+                        <td class="text-nowrap">{{ mov.data_hora|date:"d/m/Y H:i" }}</td>
+                        <td class="text-truncate" style="max-width: 100px;" title="{{ mov.usuario }}">{{ mov.usuario }}</td>
+                        <td class="text-center">
                             {% if mov.referencia_id %}
-                                #{{ mov.referencia_id }}
+                                <small>#{{ mov.referencia_id }}</small>
                             {% else %}
                                 -
                             {% endif %}
                         </td>
-                        <td>{{ mov.observacao|default:"-" }}</td>
+                        <td class="text-truncate" style="max-width: 200px;" title="{{ mov.observacao|default:'-' }}">{{ mov.observacao|default:"-" }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <div class="mt-3">
-            <small class="text-muted">Mostrando até 100 registros mais recentes</small>
-        </div>
+        <!-- Paginação -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Paginação">
+            <ul class="pagination justify-content-center mt-3">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filtros.codigo %}&codigo={{ filtros.codigo }}{% endif %}{% if filtros.usuario %}&usuario={{ filtros.usuario }}{% endif %}{% if filtros.data_inicio %}&data_inicio={{ filtros.data_inicio }}{% endif %}{% if filtros.data_fim %}&data_fim={{ filtros.data_fim }}{% endif %}">Anterior</a>
+                    </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filtros.codigo %}&codigo={{ filtros.codigo }}{% endif %}{% if filtros.usuario %}&usuario={{ filtros.usuario }}{% endif %}{% if filtros.data_inicio %}&data_inicio={{ filtros.data_inicio }}{% endif %}{% if filtros.data_fim %}&data_fim={{ filtros.data_fim }}{% endif %}">Próxima</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
         {% else %}
         <p class="text-muted">Nenhuma movimentação encontrada com os filtros aplicados.</p>
         {% endif %}

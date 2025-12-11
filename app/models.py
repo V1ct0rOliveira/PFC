@@ -6,6 +6,7 @@ class CustomUser(AbstractUser):
     # Modelo da tabela de usuário que estende o AbstractUser do Django
     # Adiciona campos específicos para o sistema de estoque
     email = models.EmailField(unique=True)
+    telefone = models.CharField(max_length=20, blank=True, null=True, help_text="Formato: +5511999999999")
     is_verified = models.BooleanField(default=False)
     nivel_acesso = models.CharField(max_length=50)
     totp_secret = models.CharField(max_length=32, blank=True, null=True)

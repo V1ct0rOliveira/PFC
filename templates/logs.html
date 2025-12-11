@@ -48,7 +48,7 @@
         <h5>Logs de Atividades</h5>
     </div>
     <div class="card-body">
-        {% if logs %}
+        {% if page_obj %}
         <div class="table-responsive">
             <table class="table table-striped">
                 <thead>
@@ -61,12 +61,12 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for log in logs %}
+                    {% for log in page_obj %}
                     <tr>
-                        <td>{{ log.id }}</td>
-                        <td>{{ log.data_hora|date:"d/m/Y H:i:s" }}</td>
-                        <td>{{ log.usuario }}</td>
-                        <td>
+                        <td class="text-center"><small>{{ log.id }}</small></td>
+                        <td class="text-nowrap">{{ log.data_hora|date:"d/m/Y H:i" }}</td>
+                        <td class="text-truncate" style="max-width: 120px;" title="{{ log.usuario }}">{{ log.usuario }}</td>
+                        <td class="text-nowrap">
                             {% if "Login" in log.acao %}
                                 <span class="badge bg-success">{{ log.acao }}</span>
                             {% elif "Logout" in log.acao %}
@@ -83,17 +83,36 @@
                                 <span class="badge bg-dark">{{ log.acao }}</span>
                             {% endif %}
                         </td>
-                        <td>
-                            <small class="text-muted">{{ log.detalhes|truncatechars:100 }}</small>
+                        <td class="text-truncate" style="max-width: 300px;" title="{{ log.detalhes }}">
+                            <small class="text-muted">{{ log.detalhes|truncatechars:80 }}</small>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <div class="mt-3">
-            <small class="text-muted">Mostrando até 200 registros mais recentes</small>
-        </div>
+        <!-- Paginação -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Paginação">
+            <ul class="pagination justify-content-center mt-3">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filtros.usuario %}&usuario={{ filtros.usuario }}{% endif %}{% if filtros.data_inicio %}&data_inicio={{ filtros.data_inicio }}{% endif %}{% if filtros.data_fim %}&data_fim={{ filtros.data_fim }}{% endif %}">Anterior</a>
+                    </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filtros.usuario %}&usuario={{ filtros.usuario }}{% endif %}{% if filtros.data_inicio %}&data_inicio={{ filtros.data_inicio }}{% endif %}{% if filtros.data_fim %}&data_fim={{ filtros.data_fim }}{% endif %}">Próxima</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
         {% else %}
         <p class="text-muted">Nenhum log encontrado com os filtros aplicados.</p>
         {% endif %}

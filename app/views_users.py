@@ -76,6 +76,12 @@ def cadastro(request):
             nivel_acesso=nivel_acesso
         )
         
+        # Adicionar telefone se fornecido
+        telefone = request.POST.get('telefone', '').strip()
+        if telefone:
+            user.telefone = telefone
+            user.save()
+        
         # Registrar log no banco
         registrar_log(
             acao="Usuário cadastrado",
@@ -127,8 +133,8 @@ def logout(request):
 def perfil(request):
     if request.method == 'POST':
         user = request.user
-        user.first_name = request.POST.get('first_name', user.first_name)
-        user.last_name = request.POST.get('last_name', user.last_name)
+        user.first_name = request.POST.get('nome', user.first_name)
+        user.last_name = request.POST.get('sobrenome', user.last_name)
         user.email = request.POST.get('email', user.email)
         user.telefone = request.POST.get('telefone', user.telefone)
         
@@ -425,35 +431,36 @@ def reset_user_totp(request, user_id):
     return redirect('dashboard_super')
 
 @login_required
-def deletar_conta(request):
-    """View para deletar conta do usuário"""
+def deletar_usuario(request, user_id):
+    """View para deletar usuário - APENAS SUPERADMIN"""
+    if request.user.nivel_acesso != 'superadmin':
+        messages.error(request, 'Acesso negado')
+        return redirect('dashboard_super')
+    
+    user_to_delete = get_object_or_404(CustomUser, id=user_id)
+    
+    # Não permitir que o superadmin delete a si mesmo
+    if user_to_delete == request.user:
+        messages.error(request, 'Você não pode excluir sua própria conta')
+        return redirect('tabela_usuarios')
+    
     if request.method == 'POST':
-        user = request.user
-        username = user.username
+        username = user_to_delete.username
         
         # Registrar log antes de deletar
         registrar_log(
-            acao="Conta deletada",
-            usuario=user,
-            detalhes=f"Usuário {username} deletou sua própria conta"
+            acao="Usuário deletado",
+            usuario=request.user,
+            detalhes=f"Superadmin {request.user.username} deletou o usuário {username}"
         )
         
         # Anonimizar dados em todas as tabelas
         from .models import Entradas, Saidas, Solicitacao, Movimentacao, logs as LogsModel
         
-        # Atualizar registros para "Usuário Excluído"
-        Entradas.objects.filter(usuario=username).update(usuario="Usuário Excluído")
-        Saidas.objects.filter(usuario=username).update(usuario="Usuário Excluído")
-        Solicitacao.objects.filter(solicitante=username).update(solicitante="Usuário Excluído")
-        Solicitacao.objects.filter(aprovador=username).update(aprovador="Usuário Excluído")
-        Movimentacao.objects.filter(usuario=username).update(usuario="Usuário Excluído")
-        LogsModel.objects.filter(usuario=username).update(usuario="Usuário Excluído")
+        # Deletar usuário
+        user_to_delete.delete()
         
-        # Fazer logout e deletar usuário
-        auth_logout(request)
-        user.delete()
-        
-        messages.success(request, 'Sua conta foi excluída com sucesso.')
-        return redirect('home')
+        messages.success(request, f'Usuário {username} foi excluído com sucesso.')
+        return redirect('tabela_usuarios')
     
-    return redirect('perfil')
+    return redirect('tabela_usuarios')

@@ -7,6 +7,7 @@ from decouple import config
 from django.core.mail import send_mail, EmailMultiAlternatives
 from .models import CustomUser, Product, Solicitacao, Movimentacao, Saidas, Entradas
 from .views_log import registrar_log
+from .whatsapp_service import WhatsAppService
 
 # ============================================================================
 # FUNÇÕES DE ESTOQUE - PRODUTOS
@@ -150,6 +151,8 @@ def listar_movimentacoes(request):
         messages.error(request, 'Acesso negado')
         return redirect('dashboard_comum')
     
+    from django.core.paginator import Paginator
+    
     movimentacoes = Movimentacao.objects.select_related('produto').order_by('-data_hora')
     
     codigo = request.GET.get('codigo', '').strip()
@@ -166,8 +169,12 @@ def listar_movimentacoes(request):
     if data_fim:
         movimentacoes = movimentacoes.filter(data_hora__date__lte=data_fim)
     
+    paginator = Paginator(movimentacoes, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     context = {
-        'movimentacoes': movimentacoes[:100],
+        'page_obj': page_obj,
         'filtros': {
             'codigo': codigo,
             'usuario': usuario,
@@ -235,10 +242,11 @@ def solicitar_produto(request):
             observacao=f'Solicitação #{solicitacao.id} criada - Destino: {destino}'
         )
         
-        # Enviar email para administradores
-        admins = CustomUser.objects.filter(nivel_acesso__in=['admin', 'superadmin'])
+        # Enviar notificações apenas para administradores (não superadmin)
+        admins = CustomUser.objects.filter(nivel_acesso='admin')
         emails_admins = [admin.email for admin in admins if admin.email]
         
+        # Enviar email
         if emails_admins:
             try:
                 html_content = f'''
@@ -307,6 +315,21 @@ Por favor, acesse o sistema para aprovar ou reprovar esta solicitação.'''
             except Exception:
                 pass
         
+        # Enviar WhatsApp para administradores
+        whatsapp = WhatsAppService()
+        for admin in admins:
+            if admin.telefone:
+                dados_whatsapp = {
+                    'id': solicitacao.id,
+                    'solicitante': request.user.username,
+                    'produto': produto.nome,
+                    'codigo': produto.codigo,
+                    'quantidade': quantidade,
+                    'destino': destino,
+                    'data': timezone.localtime(solicitacao.data_solicitacao).strftime('%d/%m/%Y às %H:%M')
+                }
+                whatsapp.send_notification(admin.telefone, 'nova_solicitacao', dados_whatsapp)
+        
         # Registrar log no banco
         registrar_log(
             acao="Solicitação criada",
@@ -369,8 +392,10 @@ def aprovar_solicitacao(request, solicitacao_id):
             observacao=f'Solicitação #{solicitacao.id} aprovada e retirada executada automaticamente - Destino: {solicitacao.destino}'
         )
         
-        # Enviar email de aprovação
+        # Enviar notificações de aprovação
         email = "beltramevictor13@gmail.com"
+        
+        # Enviar email
         try:
             html_content = f'''
             <!DOCTYPE html>
@@ -427,6 +452,24 @@ def aprovar_solicitacao(request, solicitacao_id):
         except Exception:
             pass
         
+        # Enviar WhatsApp para o solicitante
+        try:
+            solicitante_user = CustomUser.objects.get(username=solicitacao.solicitante)
+            if solicitante_user.telefone:
+                whatsapp = WhatsAppService()
+                dados_whatsapp = {
+                    'id': solicitacao.id,
+                    'solicitante': solicitacao.solicitante,
+                    'aprovador': request.user.username,
+                    'produto': produto.nome,
+                    'quantidade': solicitacao.quantidade,
+                    'destino': solicitacao.destino,
+                    'data_aprovacao': timezone.localtime().strftime('%d/%m/%Y às %H:%M')
+                }
+                whatsapp.send_notification(solicitante_user.telefone, 'solicitacao_aprovada', dados_whatsapp)
+        except CustomUser.DoesNotExist:
+            pass
+        
         # Registrar log no banco
         registrar_log(
             acao="Solicitação aprovada",
@@ -446,11 +489,30 @@ def aprovar_solicitacao(request, solicitacao_id):
 def reprovar_solicitacao(request, solicitacao_id):
     """View para reprovar solicitação"""
     solicitacao = get_object_or_404(Solicitacao, id=solicitacao_id, status='PENDENTE')
+    produto = solicitacao.produto
     
     solicitacao.status = 'REPROVADA'
     solicitacao.aprovador = request.user.username
     solicitacao.data_aprovacao = timezone.now()
     solicitacao.save()
+    
+    # Enviar WhatsApp para o solicitante
+    try:
+        solicitante_user = CustomUser.objects.get(username=solicitacao.solicitante)
+        if solicitante_user.telefone:
+            whatsapp = WhatsAppService()
+            dados_whatsapp = {
+                'id': solicitacao.id,
+                'solicitante': solicitacao.solicitante,
+                'reprovador': request.user.username,
+                'produto': produto.nome,
+                'quantidade': solicitacao.quantidade,
+                'destino': solicitacao.destino,
+                'data_reprovacao': timezone.localtime().strftime('%d/%m/%Y às %H:%M')
+            }
+            whatsapp.send_notification(solicitante_user.telefone, 'solicitacao_reprovada', dados_whatsapp)
+    except CustomUser.DoesNotExist:
+        pass
     
     # Registrar log no banco
     registrar_log(
@@ -567,6 +629,20 @@ def entrada_produto(request):
             )
             msg.attach_alternative(html_content, "text/html")
             msg.send(fail_silently=True)
+            
+            # Enviar WhatsApp apenas para administradores
+            admins = CustomUser.objects.filter(nivel_acesso='admin')
+            whatsapp = WhatsAppService()
+            for admin in admins:
+                if admin.telefone:
+                    dados_whatsapp = {
+                        'produto': produto.nome,
+                        'codigo': produto.codigo,
+                        'quantidade': quantidade,
+                        'usuario': request.user.username,
+                        'data': timezone.localtime().strftime('%d/%m/%Y às %H:%M')
+                    }
+                    whatsapp.send_notification(admin.telefone, 'entrada_produto', dados_whatsapp)
             
             # Registrar log no banco
             registrar_log(

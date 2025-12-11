@@ -39,9 +39,13 @@
                                 </td>
                                 <td>
                                     {% if usuario.totp_enabled %}
-                                        <a href="{% url 'reset_user_totp' usuario.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja resetar o 2FA deste usuário?')">Resetar 2FA</a>
+                                        <a href="{% url 'reset_user_totp' usuario.id %}" class="btn btn-sm btn-warning" onclick="return confirm('Tem certeza que deseja resetar o 2FA deste usuário?')">Resetar 2FA</a>
                                     {% else %}
                                         <span class="text-muted">2FA não configurado</span>
+                                    {% endif %}
+                                    
+                                    {% if usuario != user %}
+                                        <a href="{% url 'deletar_usuario' usuario.id %}" class="btn btn-sm btn-danger ms-1" onclick="return confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita!')">Excluir</a>
                                     {% endif %}
                                 </td>
                             </tr>

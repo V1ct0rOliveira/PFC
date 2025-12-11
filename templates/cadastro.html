@@ -64,13 +64,24 @@
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="nivel_acesso" class="form-label">Nível de Acesso</label>
-                        <select class="form-select" id="nivel_acesso" name="nivel_acesso" required>
-                            <option value="comum">Usuário Comum</option>
-                            <option value="admin">Administrador</option>
-                            <option value="superadmin">Superadministrador</option>
-                        </select>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nivel_acesso" class="form-label">Nível de Acesso</label>
+                                <select class="form-select" id="nivel_acesso" name="nivel_acesso" required>
+                                    <option value="comum">Usuário Comum</option>
+                                    <option value="admin">Administrador</option>
+                                    <option value="superadmin">Superadministrador</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="telefone" class="form-label">Telefone</label>
+                                <input type="text" class="form-control" id="telefone" name="telefone" placeholder="+5511999999999">
+                                <div class="form-text">Formato: +5511999999999</div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="alert alert-info">
